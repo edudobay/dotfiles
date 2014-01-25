@@ -1,0 +1,66 @@
+#!/usr/bin/python
+# coding: utf-8
+
+# ----------------------------------------------------------------------------
+#  shutdown-cli
+# 
+# Power off, reboot or suspend the machine via the command line, without
+# needing root access (requires a compliant login manager).
+# ----------------------------------------------------------------------------
+
+from __future__ import print_function
+
+import os
+import sys
+import dbus
+
+system_bus = dbus.SystemBus()
+login_manager = system_bus.get_object('org.freedesktop.login1', '/org/freedesktop/login1')
+
+def do_poweroff():
+   login_manager.PowerOff(True, dbus_interface='org.freedesktop.login1.Manager')
+
+def do_reboot():
+   login_manager.Reboot(True, dbus_interface='org.freedesktop.login1.Manager')
+
+def do_suspend():
+   login_manager.Suspend(True, dbus_interface='org.freedesktop.login1.Manager')
+
+def do_hibernate():
+   login_manager.Hibernate(True, dbus_interface='org.freedesktop.login1.Manager')
+
+actions = {
+   'poweroff':  do_poweroff,
+   'halt':      do_poweroff,
+   'reboot':    do_reboot,
+   'suspend':   do_suspend,
+   'susp':      do_suspend,
+   'hibernate': do_hibernate,
+   'hib':       do_hibernate,
+}
+
+def usage():
+   print("""usage: {0} <action>
+where action is one of:
+   poweroff, halt  -- power down the computer
+   reboot          -- restart the computer
+   suspend, susp   -- suspend the computer to RAM
+   hibernate, hib  -- suspend the computer to disk
+""".format(sys.argv[0]))
+
+def main(args):
+   
+   if len(args) < 2:
+      usage()
+      sys.exit(1)
+
+   action = args[1]
+   if not action in actions:
+      usage()
+      sys.exit(1)
+
+   actions[action]()
+
+if __name__ == "__main__":
+   main(sys.argv)
+
