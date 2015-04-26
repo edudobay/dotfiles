@@ -1,0 +1,103 @@
+#!/usr/bin/python3
+
+import os, sys, stat, datetime
+
+DEFAULT_TIMESTAMP_FORMAT = '%Y%m%d_%H%M'
+DEFAULT_INTERSTITIAL = ' '
+
+class RenameAction:
+    """Represents an action of renaming a file"""
+    def __init__(self, dirname, baseold, basenew):
+        self.fail = not basenew
+        if self.fail:
+            return
+        self.oldname = os.path.join(dirname, baseold)
+        self.newname = os.path.join(dirname, basenew)
+
+    def print(self):
+        print(self.oldname, '->', self.newname)
+
+    def run(self):
+        os.rename(self.oldname, self.newname)
+
+    def __bool__(self):
+        return not self.fail
+
+
+def rename_with_timestamp(fname,
+        timestamp_format=DEFAULT_TIMESTAMP_FORMAT,
+        interstitial=DEFAULT_INTERSTITIAL):
+    dirname, basename = os.path.split(fname)
+    try:
+        stat = os.stat(fname)
+    except OSError as e:
+        print(e)
+        return RenameAction(dirname, basename, None)
+
+    mtime = datetime.datetime.fromtimestamp(stat.st_mtime)
+    return RenameAction(dirname, basename,
+            ('{:' + timestamp_format + '}{}{}').format(mtime, interstitial, basename))
+
+def parse_args():
+    import argparse
+
+    def timestamp_format(fmt):
+        """
+        Validates `fmt` as a datetime format code. Returns itself if valid,
+        raises ValueError if invalid.
+        """
+        ts = datetime.datetime.now()
+        try:
+            a = ts.strftime(fmt)
+            b = ('{:' + fmt + '}').format(ts)
+            if a != b:  # Valid under strftime but not under string formatting (?)
+                raise ValueError('invalid timestamp format code')
+            return fmt
+        except:
+            raise ValueError('invalid timestamp format code')
+
+    parser = argparse.ArgumentParser(
+        description='rename files adding a timestamp as a prefix',
+    )
+
+    parser.add_argument('filename', nargs='+',
+        help='file to be renamed',
+    )
+
+    parser.add_argument('-n', '--dry-run', action='store_true',
+        default=False,
+        help="don't do anything, just print what would be done",
+    )
+
+    parser.add_argument('-f', dest='format', type=timestamp_format,
+        default=DEFAULT_TIMESTAMP_FORMAT,
+        help="timestamp format code (default: %(default)r)"\
+    )
+
+    parser.add_argument('-i', dest='interstitial', type=str,
+        default=DEFAULT_INTERSTITIAL,
+        help="separator between timestamp and original filename (default: %(default)r)"\
+            .format(DEFAULT_INTERSTITIAL),
+    )
+
+    return parser.parse_args()
+
+def get_actions(args):
+    return [rename_with_timestamp(fname,
+            timestamp_format=args.format,
+            interstitial=args.interstitial,
+        ) for fname in args.filename]
+
+if __name__ == '__main__':
+    args = parse_args()
+    actions = get_actions(args)
+
+    if not all(actions):
+        # entries that evaluate to False are the ones that raised errors
+        sys.exit(1)
+
+    for action in actions:
+        action.print()
+        if not args.dry_run:
+            action.run()
+
