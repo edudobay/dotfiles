@@ -1,5 +1,11 @@
 
-PROMPT='%F{101}%1~$(git_prompt_info)$(git_prompt_status)%(?:%F{243}:%{%F{197}%}) %% %{$reset_color%}'
+optional_user_and_host() {
+   if [[ -n $SSH_TTY ]]; then
+      print -n '%F{yellow}%n@%m%f '
+   fi
+}
+
+PROMPT='$(optional_user_and_host)%F{101}%1~$(git_prompt_info)$(git_prompt_status)%(?:%F{243}:%{%F{197}%}) %% %{$reset_color%}'
 RPROMPT='$(git_prompt_short_sha)  %F{243}%*%{$reset_color%}'
 
 ZSH_THEME_GIT_PROMPT_SHA_BEFORE="%F{239}"
