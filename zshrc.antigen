@@ -13,10 +13,6 @@ antigen theme edudobay/dotfiles zsh/themes/edudobay
 antigen apply
 # ---- </Antigen>
 
-# Python virtual environments
-VIRTUALENVWRAPPER_PYTHON=/usr/bin/python
-source /usr/bin/virtualenvwrapper.sh
-
 # Run custom scripts
 for file in $HOME/dotfiles/zsh/*.zsh; do
    source $file

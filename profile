@@ -1,9 +1,29 @@
-export PATH=$HOME/bin:$HOME/.local/bin:$HOME/dotfiles/bin:$PATH
-export EDITOR=vim
-export VISUAL=vim
+# Default editor
+EDITOR=vim
+VISUAL=vim
+export EDITOR VISUAL
 
-export PATH="$HOME/.local/npm/bin:$PATH"  # NodeJS packages
+# Path for info (as opposed to man) files
+INFOPATH=$HOME/.local/share/info:$INFOPATH
+export INFOPATH
 
-export PATH="$PATH:$HOME/.rvm/bin" # Add RVM to PATH for scripting
+# Less: quit if one screen, avoid clearing, output ANSI colors
+LESS="-F -X -R"
+export LESS
 
-[[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm" # Load RVM into a shell session *as a function*
+# Prepend user directories to PATH (only if not already present).  Note that
+# they are prepended in the order they were written -- the last will be first
+user_dir_prepend=(bin .local/bin dotfiles/bin .local/npm/bin)
+
+for dir in "${user_dir_prepend[@]}"; do
+   if [[ ":$PATH:" != *":$HOME/$dir:"* ]]; then
+      PATH=$HOME/$dir:$PATH
+   fi
+done
+unset user_dir_prepend
+
+# RVM: Add RVM to PATH for scripting
+PATH="$PATH:$HOME/.rvm/bin"
+
+export PATH
+
