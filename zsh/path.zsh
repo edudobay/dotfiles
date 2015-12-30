@@ -55,11 +55,14 @@ _path_insert() {
 }
 
 path() {
+   local cmd
    if [[ $# -eq 0 ]]; then
       _path_show
       return
    else
-      case $1 in
+      cmd=$1
+      shift
+      case $cmd in
          show|list|ls|print|dump)
             _path_show ;;
          rm|remove)
