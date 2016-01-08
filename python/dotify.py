@@ -61,7 +61,7 @@ def error(*args, **kwargs):
 def create_locked(filename, mode):
     fd = None
     try:
-        fd = os.open(dst, os.O_CREAT | os.O_EXCL, mode)
+        fd = os.open(filename, os.O_CREAT | os.O_EXCL | os.O_WRONLY, mode)
         os.lockf(fd, os.F_LOCK, 0)
         yield fd
     finally:
@@ -92,7 +92,9 @@ def mv(src, dst):
     explain("#Bmoved #F(yellow){src}#f to #F(yellow){dst}#f#b".format(src=src, dst=dst))
 
 def create_file(filename, mode=0o666):
-    """Create a file if it doesn't exist, do nothing if it exists."""
+    """Create a file if it doesn't exist, do nothing if it exists.
+
+    umask will be flagged out of mode."""
     try:
         fd = os.open(filename, os.O_CREAT | os.O_EXCL, 0o666)
         os.close(fd)
@@ -248,9 +250,11 @@ def main_link(args, settings):
         except DotifyException as e:
             error(e.message + ':', target)
 
-def main():
+def main(args=None):
+    # args defaults to None to get parameters from sys.argv; but we leave it
+    # open to make testing easier
     parser = build_cmdline_parser()
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     # dispatch to the appropriate subcommand
     if 'func' in args:
