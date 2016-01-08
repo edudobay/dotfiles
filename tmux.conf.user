@@ -1,0 +1,51 @@
+# Bindings
+# ========
+
+# Pane/window creation (splitting)
+# --------------------------------
+unbind %
+bind - split-window -v -c "#{pane_current_path}"
+bind _ split-window -h -c "#{pane_current_path}"
+
+# Open SSH window
+bind S command-prompt -p ssh: "new-window -n %1 'ssh %1'"
+
+# Session/window/pane switching
+# -----------------------------
+# Switch to last client
+bind l switch-client -l
+# Choose a session/window to switch to
+bind w choose-tree
+# Choose a window (in current session) to switch to
+bind '"' choose-window
+
+# Other
+# -----
+
+# toggle mouse (on tmux >= 2.1)
+bind u set mouse
+
+# Options
+# =======
+
+# Allow 256-color mode, changing terminal window title and scrolling via PgUp/PgDn
+set -g terminal-overrides 'xterm*:colors=256:XT:smcup@:rmcup@'
+
+# I no longer remember why I needed this
+set -g default-terminal "xterm-256color"
+
+# Pass through Ctrl modifiers
+setw -g xterm-keys on
+
+set -g window-status-format "#[fg=colour231,bg=colour234,nobold]  #I #W "
+set -g window-status-current-format "#[fg=colour231,bg=colour164,noreverse,nobold] #I: #W #[fg=colour39,bg=colour234,nobold]"
+
+set -g status-utf8 on
+
+# Enable mouse
+set -g mouse on
+
+# Start non-login shells by default
+set -g default-command "${SHELL}"
+
+# vim:set ft=tmux:
