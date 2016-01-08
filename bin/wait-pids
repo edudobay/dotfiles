@@ -1,0 +1,18 @@
+#!/bin/zsh
+# wait-pids -- Wait until all given process IDs are not running.
+
+pids=($@)
+sleep_interval=30s
+
+check_pids() {
+   for pid in $pids; do
+      if [[ -d /proc/$pid ]]; then
+         return 1
+      fi
+   done
+   return 0
+}
+
+while ! check_pids; do
+   sleep $sleep_interval
+done

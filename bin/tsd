@@ -1,0 +1,43 @@
+#!/bin/zsh
+# tsd -- Timed shutdown
+
+function usage() {
+   appname=$(basename $0)
+   cat <<EOF
+usage: ${appname} TIMEOUT [METHOD]
+
+TIMEOUT should be in a format accepted by sleep.
+
+METHOD is optional but must be one of 'poweroff', 'reboot', 'suspend',
+'hibernate'. Possible abbreviations are 'halt', 'susp', 'hib'.
+Default method is 'suspend'.
+
+EOF
+}
+
+if [ $# -lt 1 ]; then
+   usage; exit 1
+fi
+
+[[ "$1" == "--help" ]] && { usage; exit 0 }
+[[ "$1" == "-h" ]] && { usage; exit 0 }
+
+timeout=$1
+method='suspend'
+if [ $# -ge 2 ]; then
+   method=$2
+fi
+
+case "$method" in
+   poweroff|halt|reboot|suspend|susp|hibernate|hib)
+      ;;
+   *)
+      usage; exit 1 ;;
+esac
+
+echo "current time" $(date +"%H:%M:%S")
+echo "sleeping for ${timeout}; then $method"
+esleep "${timeout}" && {
+   echo "done sleeping"
+   shutdown-cli $method
+}

@@ -1,0 +1,134 @@
+#!/usr/bin/python2
+# esleep -- sleep for some time showing a pretty progress bar
+
+from __future__ import print_function
+
+import sys
+import datetime
+import time
+import re
+import math
+
+# ----------------------------------------------------------------------------
+
+re_time = r"(\d+(?:\.\d*)?)([hms])?"
+
+units = {
+   's': 1,
+   'm': 60,
+   'h': 3600
+}
+
+def parse_timestr(string):
+   m = re.search(re_time, string)
+   if m is None:
+      raise ValueError
+
+   value = float(m.group(1))
+   unit = m.group(2) or 's'
+   return units[unit] * value
+
+def format_time_interval(seconds, seconds_precision=0):
+   seconds_micro = seconds - int(seconds)
+   seconds = int(seconds)
+
+   parts = [seconds % 60]
+   seconds -= parts[0]
+   minutes = seconds/60
+
+   parts.insert(0, minutes % 60)
+   minutes -= parts[0]
+   hours = minutes/60
+
+   parts.insert(0, hours)
+
+   seconds_width = 2
+   if seconds_precision:
+      parts[-1] += seconds_micro
+      seconds_width += seconds_precision + 1
+
+   return "{0:02d}:{1:02d}:{2:0{sec_width}.{sec_precision}f}".format(
+      *parts, sec_width=seconds_width, sec_precision=seconds_precision)
+
+# ----------------------------------------------------------------------------
+
+PROGRESS_COLOR = '\033[0;32m'
+PROGRESS_WIDTH = 40
+
+class ProgressBar(object):
+   def __init__(self, width, color=None, fillchar=u"\u2588", emptychar=u" "):
+      self.width = width
+      self.fillchar = fillchar.encode('utf-8')
+      self.emptychar = emptychar.encode('utf-8')
+      if color:
+         self.color = lambda x: color + str(x) + '\033[0;39m'
+      else:
+         self.color = lambda x: x
+
+   def render(self, percent):
+      n = int(math.floor(self.width * percent))
+      bartext = self.fillchar * n + self.emptychar * (self.width - n)
+      return self.color(bartext)
+
+def calculate_step_interval(interval):
+   # for small intervals, update each time the bar will advance
+   if interval / PROGRESS_WIDTH < 1:
+      step_interval = interval / PROGRESS_WIDTH / 2.0
+   else:
+      step_interval = 0.5
+   return step_interval
+
+class PrettyTimer(object):
+   def __init__(self, interval):
+      self.interval = float(interval)
+      self.start_time = time.time()
+      self.end_time = self.start_time + self.interval
+      self.elapsed = 0.0
+
+      self.progress_bar = ProgressBar(PROGRESS_WIDTH, PROGRESS_COLOR)
+      self.step_interval = calculate_step_interval(self.interval)
+
+   def start(self):
+      self.print_remaining_time()
+      while self.elapsed < self.interval:
+         self.step()
+         self.print_remaining_time()
+      print()
+
+   def step(self):
+      time.sleep(self.step_interval)
+
+      now = time.time()
+      self.elapsed = now - self.start_time
+
+   def print_remaining_time(self):
+      remaining = self.interval - self.elapsed
+
+      print("{clear}  {remaining:10}  [{bar}]".format(
+         remaining=format_time_interval(remaining),
+         bar=self.progress_bar.render(self.elapsed / self.interval),
+         clear='\r\033[0K'), end='')
+      sys.stdout.flush()
+
+# ----------------------------------------------------------------------------
+
+def print_usage():
+   print("usage: {0} INTERVAL\n"
+         "where INTERVAL consists of a number and (optionally) a time unit,\n"
+         "which must be one of 'h', 'm' and 's', defaulting do 's' if not given.\n")
+
+def main():
+   try:
+      interval = parse_timestr(sys.argv[1])
+   except IndexError:
+      print_usage()
+      sys.exit(1)
+   except ValueError:
+      print("error: invalid time string", file=sys.stderr)
+      sys.exit(1)
+
+   timer = PrettyTimer(interval)
+   timer.start()
+
+if __name__ == "__main__":
+   main()
