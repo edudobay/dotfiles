@@ -1,0 +1,19 @@
+[core]
+	editor = vim
+	autocrlf = input
+	excludesfile = ~/dotfiles/gitignore_global
+[user]
+	name = AUTHORNAME
+	email = AUTHOREMAIL
+[color]
+	ui = true
+[alias]
+	hist = log --pretty=format:\"%h %ad | %s%d [%an]\" --graph --date=short
+	st = status
+	s = status -sb
+	br = branch
+	co = checkout
+	df = diff
+	dfs = diff --staged
+[push]
+	default = simple
