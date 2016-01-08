@@ -1,0 +1,79 @@
+#!/bin/zsh
+# Repeat a command for many arguments
+
+PROGRAM=$(basename $0)
+
+fmt_filename_begin="\033[36m"
+fmt_filename_end="\033[39m"
+fmt_command_begin="\033[33m"
+fmt_command_end="\033[39m"
+
+run_command() {
+local FILENAME basename dirname cmd_args fmtcode rootname
+FILENAME=$1
+basename=$(basename "$FILENAME" 2>/dev/null)
+dirname=$(dirname "$FILENAME" 2>/dev/null)
+cmd_args=()
+for arg in $OPTS; do
+   while [[ $arg =~ '(%[nbrd])' ]]; do
+      fmtcode=${match[1]}
+      case $fmtcode in
+      %n)
+         arg=${arg//${fmtcode}/$FILENAME}
+         ;;
+      %b)
+         arg=${arg//${fmtcode}/$basename}
+         ;;
+      %r)
+         # find basename and remove extension
+         rootname=${basename%.*}
+         arg=${arg//${fmtcode}/$rootname}
+         ;;
+      %d)
+         arg=${arg//${fmtcode}/$dirname}
+         ;;
+      esac
+   done
+   cmd_args+=($arg)
+done
+print "$fmt_command_begin""... "$COMMAND $cmd_args $fmt_command_end
+$COMMAND $cmd_args
+}
+
+find_separator_pos() {
+   integer i=0
+   while [[ $((i++)) -lt $# ]]; do
+      if [[ $argv[$i] == '--' ]]; then
+         print "$i"
+         return
+      fi
+   done
+}
+
+print_usage() {
+   cat <<EOF
+usage: $PROGRAM COMMAND [COMMAND-options] -- FILE [FILE ...]
+EOF
+}
+
+parse_args() {
+   [[ $# -ge 4 ]] || return 1
+   COMMAND=$1
+   pos=$(find_separator_pos $argv)
+   [[ -n $pos || $pos -lt 2 ]] || return 1
+}
+
+# find args
+if ! parse_args $argv; then
+   print_usage >&2
+   exit 1
+fi
+
+OPTS=($argv[2,$((pos-1))])
+files=($argv[$((pos+1)),-1])
+
+for file in $files; do
+   print "$fmt_filename_begin""=== $file""$fmt_filename_end"
+   run_command $file
+done
+
