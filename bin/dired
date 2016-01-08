@@ -1,0 +1,16 @@
+#!/bin/bash
+# dired -- Directory editor. Invoke an editor where file names may be edited;
+#   files are renamed after editor exits.
+
+: ${EDITOR:=vim}
+
+ls > /tmp/renameFilesFrom
+cp /tmp/renameFilesFrom /tmp/renameFilesTo
+$EDITOR /tmp/renameFilesTo
+echo -n "Renomear arquivos selecionados? [s/N] "
+read -n 1 confirmRename
+echo
+if [[ $confirmRename == "s" || $confirmRename == "S" ]]; then
+   brename /tmp/renameFilesFrom /tmp/renameFilesTo &&
+      rm -f /tmp/renameFilesFrom /tmp/renameFilesTo
+fi
