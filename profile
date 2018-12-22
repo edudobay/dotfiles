@@ -13,7 +13,7 @@ export LESS
 
 # Prepend user directories to PATH (only if not already present).  Note that
 # they are prepended in the order they were written -- the last will be first
-user_dir_prepend=(bin .local/bin dotfiles/bin .local/npm/bin)
+user_dir_prepend=(bin .local/bin dotfiles/bin)
 
 for dir in "${user_dir_prepend[@]}"; do
    if [[ ":$PATH:" != *":$HOME/$dir:"* ]]; then
@@ -21,9 +21,6 @@ for dir in "${user_dir_prepend[@]}"; do
    fi
 done
 unset user_dir_prepend
-
-# RVM: Add RVM to PATH for scripting
-PATH="$PATH:$HOME/.rvm/bin"
 
 export PATH
 
