@@ -1,12 +1,29 @@
 #!/usr/bin/env python3
+"""
+password_generator
+------------------
+
+Generate random passwords based on user-given parameters.
+"""
 
 import random
+from functools import reduce
+from typing import *
 
-DEFAULT_LENGTH = 10
+DEFAULT_LENGTH = 16
 SYMBOLS_DEFAULT = r'\/!@#$%&*-+_=~^.,:;()[]{}<>'
 
-def generate_password(length, allowed_char_sets):
-    return ''.join(random.choice(random.choice(allowed_char_sets)) for _ in range(length))
+def _sets_union(sets: Sequence[Set]) -> Set:
+    return reduce(set.union, sets, set())
+
+def generate_password(length: int, allowed_char_sets: List[Set]):
+    pool = list(_sets_union(allowed_char_sets))
+    sets_count = len(allowed_char_sets)
+    start = [random.choice(s) for s in allowed_char_sets]
+    remainder = [random.choice(pool) for _ in range(length)]
+    password = start + remainder
+    random.shuffle(password)
+    return ''.join(password)
 
 def get_allowed_char_sets(args):
     from string import ascii_uppercase, ascii_lowercase, digits
@@ -25,8 +42,8 @@ def get_allowed_char_sets(args):
 
 def main():
     import argparse
-    parser = argparse.ArgumentParser(description=
-        'Generate random strings that can be used as passwords or secret keys.')
+    parser = argparse.ArgumentParser(
+        description='Generate random strings that can be used as passwords or secret keys.')
 
     parser.add_argument('-L', '--length', type=int, default=DEFAULT_LENGTH,
         help='Set length of generated password')
