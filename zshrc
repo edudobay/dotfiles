@@ -1,5 +1,5 @@
 # ---- <Antigen>
-source ~/.local/antigen/antigen.zsh
+source ~/dotfiles/antigen.zsh
 
 antigen use oh-my-zsh
 
@@ -12,6 +12,8 @@ antigen theme edudobay/dotfiles zsh/themes/edudobay
 
 antigen apply
 # ---- </Antigen>
+
+[[ -f ~/.zshrc.before ]] && source ~/.zshrc.before
 
 # Run custom scripts
 for file in $HOME/dotfiles/zsh/*.zsh; do

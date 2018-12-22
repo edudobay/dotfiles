@@ -1,19 +1,26 @@
 # Default editor
-export EDITOR=vim VISUAL=vim
+export EDITOR=nvim
+export VISUAL=nvim
 
-# Path for info (as opposed to man) files
-export INFOPATH=$HOME/.local/share/info:$INFOPATH
-
-# Prepend user directories to PATH (only if not already present)
-user_dir_prepend=(
-   bin
-   dotfiles/bin
-   .local/bin
-   .rvm/bin        # for scripting
-   .local/npm/bin
+# Path for info (man’s forgotten cousin) files
+typeset -TxU INFOPATH _infopath
+_infopath+=(
+   $HOME/.local/share/info
 )
 
-path=($HOME/${^user_dir_prepend} $path)
-unset user_dir_prepend
+# Prepend user directories to PATH (only if not already present)
+path=(
+   $HOME/bin
+   $HOME/dotfiles/bin
+   $HOME/.local/bin
+   /apps/bin
+   $path
+)
 
-export PATH
+fpath=(
+   $HOME/.local/share/zsh/completion
+   $fpath
+)
+
+# Export PATH and avoid duplicate entries
+typeset -xU PATH
