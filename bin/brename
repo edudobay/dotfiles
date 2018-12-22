@@ -1,34 +1,118 @@
-#!/usr/bin/python2
-# brename -- Batch file renaming
+#!/usr/bin/python3
+"""
+brename -- Batch file renaming
+"""
 
-# TODO: Needs to be more fail-proof
+# [2016] TODO: Needs to be more fail-proof
 
-from __future__ import print_function
-import os, sys
+import os, sys, subprocess
+import pty
+from tempfile import NamedTemporaryFile
 
-if len(sys.argv) != 3 or ('-h' in sys.argv or '--help' in sys.argv):
-   print('usage: {0} SRCFILE DSTFILE\n' \
-      'Renames multiple files based on information contained in text files.\n\n' \
-      'SRCFILE is a file containing the current file names, one per line\n' \
-      'and DSTFILE, similarly, contains the new file names\n'.format(\
-         os.path.basename(sys.argv[0])),
-      file=sys.stderr)
-   sys.exit(0)
+def find_editor():
+    return os.getenv('EDITOR', 'sensible-editor')
 
-fnin = sys.argv[1]
-fnout = sys.argv[2]
+def rename_files(sources, destinations):
+    for source, destination in zip(sources, destinations):
+        if source == destination:
+            continue
+        if not os.access(source, os.F_OK):
+            print('source doesn\'t exist:', source)
+        elif os.access(destination, os.F_OK):
+            print('destination exists:', destination)
+        else:
+            print(source, '->', destination)
 
-fin = open(fnin, 'r')
-fout = open(fnout, 'r')
+        os.rename(source, destination)
 
-for line in fin:
-   f1 = line.rstrip('\n')
-   f2 = fout.readline().rstrip('\n')
-   if f1 != f2:
-      if not os.access(f1, os.F_OK):
-         print("doesn't exist:", f1)
-      elif os.access(f2, os.F_OK):
-         print("file exists:", f2)
-      else:
-         print(f1, '->', f2)
-         os.rename(f1, f2)
+def filename_from_stream_line(line):
+    return line.rstrip('\n')
+
+def rename_from_files(sources_file, destinations_file):
+    with open(sources_file) as sources_stream, open(destinations_file) as destinations_stream:
+        rename_files(
+            map(filename_from_stream_line, sources_stream),
+            map(filename_from_stream_line, destinations_stream))
+
+def make_temp_file():
+    return NamedTemporaryFile('w+', encoding=sys.getdefaultencoding())
+
+def rename_from_files_with_editor(sources):
+    editor = find_editor()
+
+    with make_temp_file() as destinations_file:
+        destinations_file.write('\n'.join(sources) + '\n')
+        destinations_file.flush()
+
+        subprocess.run([editor, destinations_file.name])
+        # pty.spawn([editor, destinations_file.name])
+
+        destinations_file.seek(0, 0)
+        destinations = list(map(filename_from_stream_line, destinations_file))
+
+    rename_files(sources, destinations)
+
+def rename_from_stdin_with_editor():
+    sources = list(map(filename_from_stream_line, sys.stdin))
+
+    editor = find_editor()
+
+    with make_temp_file() as destinations_file:
+        destinations_file.write('\n'.join(sources) + '\n')
+        destinations_file.flush()
+
+        subprocess.run([editor, destinations_file.name])
+        # pty.spawn([editor, destinations_file.name])
+
+        destinations_file.seek(0, 0)
+        destinations = list(map(filename_from_stream_line, destinations_file))
+
+    rename_files(sources, destinations)
+
+def print_usage():
+    msg = '''
+Usage: {prog} SRCFILE DSTFILE
+   or: {prog} -e
+
+Rename multiple files, gathering source and destination file names from
+lines in text files which are read 'side by side'.
+
+If the destination name is equal to the source name, that pair of
+entries is skipped.
+
+Processing stops when the shortest input sequence ends.
+
+In the first form, two file names are given, containing the source names
+and the destination names.
+
+In the second form, source names are read from the standard input, an
+editor (according to the environment variable EDITOR) is launched on a
+file that should be edited to contain the destination names.
+'''
+    print(msg.format(prog=os.path.basename(sys.argv[0])),
+        file=sys.stderr)
+
+def main():
+
+    args = sys.argv[1:]
+
+    if ('-h' in args or '--help' in args):
+        print_usage()
+
+    elif args[0] == '-f':
+        rename_from_files_with_editor(args[1:])
+
+    elif tuple(args) == ('-e',):
+        rename_from_stdin_with_editor()
+
+    elif len(args) == 2:
+        rename_from_files(args[0], args[1])
+
+    else:
+        print_usage()
+        return 1
+
+if __name__ == '__main__':
+    result = main()
+    if result is not None:
+        sys.exit(result)
