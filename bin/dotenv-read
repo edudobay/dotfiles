@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+
+import io
+import re
+import sys
+import argparse
+from functools import partial
+from typing import *
+
+I = TypeVar('I')
+T = TypeVar('T')
+U = TypeVar('U')
+
+KeyValue = Tuple[str, str]
+Getter = Callable[[I], Optional[T]]
+Transformer = Callable[[T], U]
+
+def split_key_value(text: str) -> KeyValue:
+    return tuple(text.split('=', 1))
+
+def shell_quote(text: str) -> str:
+    return text.replace("'", "'\\''")
+
+def get_key_value(line: str) -> Optional[KeyValue]:
+    if line.startswith('#'): return None
+    if line.find('=') <= 0: return None
+    return split_key_value(line)
+
+def key_value_to_assignment(key_value: KeyValue) -> str:
+    key, value = key_value
+    return "%s='%s'" % (key, shell_quote(value))
+
+def key_value_to_export(key_value: KeyValue) -> str:
+    key, value = key_value
+    return "export %s='%s'" % (key, shell_quote(value))
+
+def not_none(seq: Iterable[Optional[T]]) -> Iterator[T]:
+    return (item for item in seq if item is not None)
+
+def get_items(getter: Getter, seq: Iterator[I]) -> Iterator[T]:
+    return not_none(map(getter, seq))
+
+def strip(line: str) -> str:
+    return line.rstrip('\n')
+
+def pipe_lines(getter: Getter, transform: Transformer, input_stream: io.TextIOBase):
+    return map(
+        transform,
+        get_items(getter, map(strip, input_stream))
+    )
+
+def join_files(filenames):
+    for filename in filenames:
+        with open(filename) as stream:
+            yield from stream
+
+def cli_main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--plain', action='store_true',
+                        help='output plain variable assignments (without `export`)')
+    parser.add_argument('filename', nargs='*',
+                        help='read data from files instead of standard input')
+    args = parser.parse_args()
+
+    transformer = (
+        key_value_to_assignment if args.plain
+        else key_value_to_export
+    )
+
+    input_stream = (
+        join_files(args.filename) if args.filename
+        else sys.stdin
+    )
+
+    print('\n'.join(pipe_lines(get_key_value, transformer, input_stream)))
+
+if __name__ == '__main__':
+    cli_main()

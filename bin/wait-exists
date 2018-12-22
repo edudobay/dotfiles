@@ -1,0 +1,75 @@
+#!/bin/zsh
+# wait-exists -- Wait while the given files (do not) exist
+
+PROGRAM=$0
+
+zparseopts -D -E \
+  i:=sleep_interval -interval:=sleep_interval \
+  n=negate -negate=negate \
+  y=any -any=any \
+  v=verbose -verbose=verbose \
+  h=help -help=help
+
+print_usage() {
+  cat <<EOF
+usage: $PROGRAM [-i INTERVAL] [-n] [-y] [-v] FILE [FILE ...]
+
+Repeatedly test for a path existence condition while it is not met.
+
+Condition selection:
+  Defaults to expecting all given paths to exist.
+
+  -y, --any                         expect any of the paths to exist
+  -n, --negate                      negate the condition (note that:
+                                      not any = none, not all = some)
+
+Other options:
+  -i INTERVAL, --interval INTERVAL  set polling interval (sleep(1) syntax)
+  -v, --verbose                     show more status messages
+  -h, --help                        show this help screen and exit
+
+EOF
+}
+
+if [[ -n $help ]]; then
+  print_usage
+  exit
+fi
+
+files=($@)
+if [[ $#files -eq 0 ]]; then
+  echo "At least one file must be provided"
+  exit 1
+fi
+
+if [[ -z $sleep_interval ]]; then
+  sleep_interval=30s
+else
+  sleep_interval=${sleep_interval[2]}
+fi
+
+check_existence() {
+  local n=${#files} matched=0
+  for file in $files; do
+    [[ -e $file ]] && let matched++
+  done
+  
+  if [[ -n $any ]]; then
+    [[ $matched -gt 0 ]]
+  else
+    [[ $matched -eq $n ]]
+  fi
+}
+
+check_condition() {
+  if [[ -n $negate ]]; then
+    ! check_existence
+  else
+    check_existence
+  fi
+}
+
+while ! check_condition; do
+  [[ -n $verbose ]] && echo "not passed"
+  sleep $sleep_interval
+done

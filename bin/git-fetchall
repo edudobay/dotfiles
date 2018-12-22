@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+
+from argparse import ArgumentParser, Namespace
+import os
+import subprocess
+
+def is_git_repo(dirname):
+    from os.path import realpath, join, isdir
+
+    realdir = realpath(dirname)
+    return isdir(realdir) and isdir(join(realdir, '.git'))
+
+class ProcessUncleanExit(Exception): pass
+
+class RepoActions:
+    def __init__(self, dirname):
+        self.dirname = dirname
+
+    def run(self, plan):
+        if not is_git_repo(self.dirname):
+            print(f'===> skipping {self.dirname}, not a .git repo')
+            return
+
+        print(f'===> updating {self.dirname}')
+
+        self.fetch()
+
+        if plan.merge:
+            self.merge()
+
+    def fetch(self):
+        print('... git fetch')
+        result = subprocess.run(['git', 'fetch'], cwd=self.dirname)
+        if result.returncode != 0:
+            raise ProcessUncleanExit()
+
+    def merge(self):
+        print('... git merge')
+        result = subprocess.run(['git', 'merge', '--ff-only'], cwd=self.dirname)
+        if result.returncode != 0:
+            print('--- merge failed')
+
+def parse():
+    parser = ArgumentParser()
+
+    parser.add_argument(
+        '--merge', '-m', action='store_true',
+        help='merge all repos that can be resolved with a fast-forward'
+    )
+
+    parser.add_argument('repo', nargs='*',
+        help='directories containing the repos to update (default: subdirs of current working directory)'
+    )
+
+    args = parser.parse_args()
+    return args
+
+def subdirs(dir):
+    return sorted(d for d in os.listdir(dir) if is_git_repo(d))
+
+def main():
+    args = parse()
+    if not args.repo:
+        args.repo = subdirs('.')
+
+    for repo in args.repo:
+        repo = os.path.realpath(repo)
+        actions = RepoActions(repo)
+        plan = Namespace(merge=args.merge)
+
+        try:
+            actions.run(plan)
+        except ProcessUncleanExit as e:
+            print('--- failed')
+
+        print()
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

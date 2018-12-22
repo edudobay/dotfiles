@@ -1,0 +1,39 @@
+#!/usr/bin/python3
+
+def read_fraction(fraction):
+    fraction = float(fraction)
+    return fraction
+
+def read_decimal(decimal):
+    decimal = int(decimal)
+    return decimal / 255
+
+def read_hex(hex_string):
+    hex_int = int(hex_string, 16)
+    return hex_int / 255
+
+def print_conversions(fraction):
+    print("""\
+Fraction (0 to 1):  {fraction:.6f}
+Decimal (0 to 255): {decimal}
+Hexadecimal:        {decimal:x}
+""".format(fraction=fraction, decimal=round(fraction * 255)))
+
+if __name__ == '__main__':
+    from argparse import ArgumentParser
+
+    parser = ArgumentParser()
+    parser.add_argument('-H', dest='input_hex')
+    parser.add_argument('-f', dest='input_fraction')
+    parser.add_argument('-d', dest='input_decimal')
+    args = parser.parse_args()
+
+    if args.input_hex is not None:
+        data_in = read_hex(args.input_hex)
+    elif args.input_fraction is not None:
+        data_in = read_fraction(args.input_fraction)
+    elif args.input_decimal is not None:
+        data_in = read_decimal(args.input_decimal)
+
+    print_conversions(data_in)
+

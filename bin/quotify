@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+
+import sys
+
+def quotify(text: str) -> str:
+    return text.replace("'", "'\\''")
+
+def pipe(callback):
+    sys.stdout.write(callback(sys.stdin.read()))
+
+def quotify_cli():
+    pipe(quotify)
+
+if __name__ == '__main__':
+    quotify_cli()
