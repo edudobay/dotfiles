@@ -131,4 +131,7 @@ def main():
    timer.start()
 
 if __name__ == "__main__":
-   main()
+   try:
+      main()
+   except KeyboardInterrupt:
+      print('\ninterrupted by keyboard')
