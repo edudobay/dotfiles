@@ -2,7 +2,7 @@
 # wait-pids -- Wait until all given process IDs are not running.
 
 pids=($@)
-sleep_interval=30s
+sleep_interval=${DELAY:-30s}
 
 check_pids() {
    for pid in $pids; do
