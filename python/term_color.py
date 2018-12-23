@@ -1,5 +1,8 @@
 import re
 
+## TODO:
+## - add option for auto-closing open "tags"
+
 COLOR_CODES = {
     'red': 1,
     'green': 2,
