@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+import lz4.block
+import struct
+import sys
+
+MOZ_MAGIC = b'mozLz40\0'
+
+def decode_bookmarks_jsonlz4(input_stream, output_stream):
+    magic = input_stream.read(8)
+    size, = struct.unpack('I', input_stream.read(4))
+
+    print('magic check:', magic == MOZ_MAGIC, file=sys.stderr)
+    print('size:', size, file=sys.stderr)
+
+    data = lz4.block.decompress(input_stream.read(), uncompressed_size=size)
+
+    output_stream.write(data)
+
+if __name__ == '__main__':
+    if len(sys.argv) > 3:
+        sys.exit(1)
+
+    elif len(sys.argv) == 3:
+        _, input_file, output_file = sys.argv
+
+        with open(input_file, 'rb') as input_stream:
+            with open(output_file, 'wb') as output_stream:
+                decode_bookmarks_jsonlz4(input_stream, output_stream)
+
+    elif len(sys.argv) == 2:
+        _, input_file = sys.argv
+        with open(input_file, 'rb') as input_stream:
+            decode_bookmarks_jsonlz4(input_stream, sys.stdout.buffer)
+
+    else:
+        decode_bookmarks_jsonlz4(sys.stdin.buffer, sys.stdout.buffer)
