@@ -1,9 +1,19 @@
 [[ ! -o login ]] || return
 
-export PYENV_ROOT=$HOME/.local/pyenv
-if [[ ! -d $PYENV_ROOT ]]; then
-    PYENV_ROOT=/apps/pyenv
-fi
+_find_pyenv_root() {
+    for possible_root in \
+        $HOME/.pyenv \
+        $HOME/.local/pyenv \
+        /apps/pyenv
+    do
+        if [[ -d $possible_root ]]; then
+            echo $possible_root
+            return
+        fi
+    done
+}
+
+export PYENV_ROOT=$(_find_pyenv_root)
 
 type $PYENV_ROOT/pyenv &>/dev/null && {
     function pyenv() {
