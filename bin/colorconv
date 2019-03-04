@@ -1,5 +1,6 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
+import re
 import sys
 import textwrap
 
@@ -51,12 +52,31 @@ def read_hex(hex_string):
         raise BadInput("hexadecimal input must be between 00 and FF")
     return IntegralComponent(decimal)
 
-def print_conversions(component):
+def split_many(input, transform):
+    return [transform(c) for c in re.split('[, ]', input)]
+
+
+def print_conversions(components):
+    headers = ('fraction', 'decimal', 'hexadecimal')
+    converted = (
+        ['{:.6f}'.format(component.fraction) for component in components],
+        ['{}'.format(component.integral) for component in components],
+        ['{:02x}'.format(component.integral) for component in components],
+    )
+
+    columns = len(components)
+    column_widths = [max(len(row[i]) for row in converted) for i in range(columns)]
+
+    aligned = [
+        ' '.join(s.rjust(width, ' ') for (s, width) in zip(row, column_widths))
+        for row in converted
+    ]
+
     print(textwrap.dedent("""\
-            fraction:     {fraction:.6f}
+            fraction:     {fraction}
             decimal:      {decimal}
-            hexadecimal:  {decimal:02x}""")
-        .format(fraction=component.fraction, decimal=component.integral)
+            hexadecimal:  {hexadecimal}""")
+        .format(**dict(zip(headers, aligned)))
     )
 
 def main():
@@ -65,11 +85,13 @@ def main():
 
     parser = argparse.ArgumentParser(
         description=textwrap.dedent("""\
-            convert individual color components into three formats:
+            Convert color components into three formats:
 
                 * fraction (0 to 1)
                 * decimal (0 to 255)
                 * hexadecimal (00 to FF)
+
+            Multiple color components might be separated by commas or spaces.
             """),
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -81,11 +103,14 @@ def main():
 
     try:
         if args.input_hex is not None:
-            data_in = read_hex(args.input_hex)
+            data_in = split_many(args.input_hex, read_hex)
         elif args.input_fraction is not None:
-            data_in = read_fraction(args.input_fraction)
+            data_in = split_many(args.input_fraction, read_fraction)
         elif args.input_decimal is not None:
-            data_in = read_decimal(args.input_decimal)
+            data_in = split_many(args.input_decimal, read_decimal)
+        else:
+            parser.print_help()
+            return 1
     except BadInput as e:
         print("bad input:", e.message)
         return 1
