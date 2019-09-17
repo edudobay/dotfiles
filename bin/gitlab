@@ -1,0 +1,238 @@
+#!/usr/bin/env python3.7
+
+import argparse
+import sys
+import subprocess
+import re
+import urllib.parse
+from functools import wraps
+
+
+def git(args):
+    proc = subprocess.run(
+        ['git'] + args,
+        check=True,
+        capture_output=True,
+        encoding=sys.getdefaultencoding(),
+    )
+
+    return proc.stdout
+
+
+def browse(url):
+    proc = subprocess.run(
+        [get_browser(), url],
+        check=True,
+    )
+
+
+def get_browser():
+    if sys.platform == 'linux':
+        return 'xdg-open'
+    return 'open'
+
+
+def get_remote_url(remote_name):
+    stdout = git(['remote', 'get-url', remote_name])
+    remote_url = stdout.strip()
+
+    match = re.match('^git@gitlab.com:(.+?)(\.git)?$', remote_url)
+    if match is None:
+        return None
+
+    repo = match.group(1)
+    return f'https://gitlab.com/{repo}'
+
+
+def get_current_branch():
+    stdout = git(['rev-parse', '--abbrev-ref', 'HEAD'])
+    branch_name = stdout.strip()
+    return branch_name
+
+
+def resolve_ref(ref):
+    if ref is None or not ref:
+        return get_current_branch()
+    else:
+        return ref
+
+
+def open_url_command(path=None, *, url=None):
+    if int(path is None) + int(url is None) != 1:
+        raise ValueError('exactly one of path, url must be provided')
+
+    if path is not None:
+        path_factory = path if callable(path) else lambda _: path
+        url_factory = lambda args: get_remote_url(args.remote) + '/' + path_factory(args)
+    else:
+        url_factory = url if callable(url) else lambda _: url
+
+    def handler(args):
+        url = url_factory(args)
+        print(url)
+        browse(url)
+
+    return handler
+
+
+class Commands:
+    create_new_repo = open_url_command(url='https://gitlab.com/projects/new')
+    view_issues = open_url_command('issues')
+    new_issue = open_url_command('issues/new')
+    view_merge_requests = open_url_command('merge_requests')
+    view_any = open_url_command(lambda args: args.page.lstrip('/'))
+    view_tree = open_url_command(lambda args: '/tree/' + resolve_ref(args.ref))
+    view_branches = open_url_command('branches')
+
+    def _create_merge_request_path(args):
+        params = {
+            'merge_request[source_branch]': args.source_branch or get_current_branch(),
+            'merge_request[target_branch]': args.target_branch,
+        }
+
+        query_encoded = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None})
+        return f'merge_requests/new?{query_encoded}'
+
+    create_merge_request = open_url_command(_create_merge_request_path)
+
+
+def main(args):
+    handler = getattr(Commands, args.command)
+    handler(args)
+
+
+class CliParserBuilder:
+    def subparser_new_repo(self, subparsers):
+        parser = subparsers.add_parser(
+            'new-repository',
+            aliases=['newrepo'],
+            help='Open a page to create a new repository',
+        )
+        parser.set_defaults(command='create_new_repo')
+
+    def subparser_go(self, subparsers):
+        parser = subparsers.add_parser(
+            'go',
+            help='Open any repository page given by its path',
+        )
+        parser.set_defaults(command='view_any')
+        parser.add_argument(
+            'page', nargs='?', default='',
+            help='Specify a custom plain path below the repository URL'
+        )
+
+    def subparser_tree(self, subparsers):
+        parser = subparsers.add_parser(
+            'tree',
+            help='Open the repository file tree for a given ref (branch, commit, tag)'
+        )
+        parser.set_defaults(command='view_tree')
+        parser.add_argument(
+            'ref', nargs='?', default=None,
+            help='Select a ref (default: current branch, or commit if detached)'
+        )
+
+    def subparser_view_issues(self, subparsers):
+        parser = subparsers.add_parser(
+            'issues',
+            help='Open the issues view',
+        )
+        parser.set_defaults(command='view_issues', page='')
+
+    def subparser_new_issue(self, subparsers):
+        parser = subparsers.add_parser(
+            'new-issue',
+            aliases=['new_issue', 'issue-new'],
+            help='Open a page to create a new issue',
+        )
+        parser.set_defaults(command='new_issue', page='')
+
+    def subparser_repo(self, subparsers):
+        parser = subparsers.add_parser(
+            'repo',
+            aliases=['browse'],
+            help='Open the main repository page',
+        )
+        parser.set_defaults(command='view_any', page='')
+
+    def subparser_branches(self, subparsers):
+        parser = subparsers.add_parser(
+            'branches',
+            help='Open the repository branches page',
+        )
+        parser.set_defaults(command='view_branches')
+
+    def subparser_view_merge_requests(self, subparsers):
+        parser = subparsers.add_parser(
+            'prs',
+            aliases=['mrs', 'view_prs', 'view_mrs'],
+            help='Open the merge requests view',
+        )
+        parser.set_defaults(command='view_merge_requests', page='')
+
+    def subparser_pr(self, subparsers):
+        parser = subparsers.add_parser(
+            'pr',
+            aliases=['mr', 'pull', 'merge'],
+            help='Create a merge request',
+        )
+        parser.set_defaults(command='create_merge_request')
+
+        parser.add_argument(
+            '-t',
+            '--target',
+            dest='target_branch',
+            help='set the target branch (defaults to master)',
+        )
+
+        parser.add_argument(
+            'source_branch',
+            nargs='?',
+            help='set the source branch (defaults to currently checked out branch)',
+        )
+
+    def add_subparsers(self, parser):
+        subparsers = parser.add_subparsers(
+            help='sub-command help',
+        )
+        for factory in self._get_subparser_factories():
+            factory(subparsers)
+
+    def build(self):
+        parser = argparse.ArgumentParser(
+            description='Open GitLab pages on your web browser'
+        )
+
+        parser.add_argument(
+            '-r',
+            '--remote',
+            default='origin',
+            help='set the remote that should be used (defaults to origin)',
+        )
+        # TODO: default to first remote (as returned by `git remote`) if `origin`
+        # does not exist or is not a GitLab repo
+
+        self.add_subparsers(parser)
+
+        return parser
+
+    def _get_subparser_factories(self):
+        return [
+            getattr(self, method_name)
+            for method_name in dir(self)
+            if method_name.startswith('subparser_')
+        ]
+
+def cli_main():
+    parser = CliParserBuilder().build()
+    args = parser.parse_args()
+
+    if not 'command' in args:
+        parser.print_usage()
+        sys.exit(1)
+
+    main(args)
+
+
+if __name__ == '__main__':
+    cli_main()
