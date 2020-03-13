@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 """
 brename -- Batch file renaming
 """
@@ -18,8 +18,10 @@ def rename_files(sources, destinations):
             continue
         if not os.access(source, os.F_OK):
             print('source doesn\'t exist:', source)
+            continue
         elif os.access(destination, os.F_OK):
             print('destination exists:', destination)
+            continue
         else:
             print(source, '->', destination)
 
