@@ -24,10 +24,8 @@ fi
 
 function xrun()
 {
-   "$@" &>/dev/null &
-   pid=$!
-   job_id=$(jobs -l | grep "$pid" | cut -d ']' -f1 | cut -d '[' -f2)
-   disown "%$job_id"
+   nohup "$@" &>/dev/null &
+   disown
 }
 
 alias cnf='command-not-found'
