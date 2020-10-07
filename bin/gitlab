@@ -116,91 +116,98 @@ def main(args):
         handler.visit_url(args)
 
 
-class CliParserBuilder:
-    def subparser_new_repo(self, subparsers):
-        parser = subparsers.add_parser(
-            'new-repository',
-            aliases=['newrepo'],
-            help='Open a page to create a new repository',
-        )
-        parser.set_defaults(command='create_new_repo')
+def make_subparser(command_handler, *aliases, help, extra_defaults=None):
+    main_name, *aliases = aliases
 
-    def subparser_go(self, subparsers):
+    if extra_defaults is None:
+        extra_defaults = {}
+
+    def _subparser_factory(self, subparsers):
         parser = subparsers.add_parser(
-            'go',
-            help='Open any repository page given by its path',
+            main_name,
+            aliases=aliases,
+            help=help,
         )
-        parser.set_defaults(command='view_any')
+
+        parser.set_defaults(command=command_handler, **extra_defaults)
+
+        return parser
+
+    return _subparser_factory
+
+
+def subparser_builder(*args, **kwargs):
+    def inner(subparser_configurator):
+        @wraps(subparser_configurator)
+        def configure_subparser(self, subparsers):
+            parser = make_subparser(*args, **kwargs)(self, subparsers)
+            subparser_configurator(self, parser)
+        return configure_subparser
+    return inner
+
+
+class CliParserBuilder:
+    subparser_new_repo = make_subparser(
+        Commands.create_new_repo, 'new-repository', 'newrepo',
+        help='Open a page to create a new repository',
+    )
+
+    @subparser_builder(
+        Commands.view_any, 'go',
+        help='Open any repository page given by its path',
+    )
+    def subparser_go(self, parser):
         parser.add_argument(
             'page', nargs='?', default='',
             help='Specify a custom plain path below the repository URL'
         )
 
-    def subparser_tree(self, subparsers):
-        parser = subparsers.add_parser(
-            'tree',
-            help='Open the repository file tree for a given ref (branch, commit, tag)'
-        )
-        parser.set_defaults(command='view_tree')
+    @subparser_builder(
+        Commands.view_tree, 'tree',
+        help='Open the repository file tree for a given ref (branch, commit, tag)',
+    )
+    def subparser_tree(self, parser):
         parser.add_argument(
             'ref', nargs='?', default=None,
             help='Select a ref (default: current branch, or commit if detached)'
         )
 
-    def subparser_view_issues(self, subparsers):
-        parser = subparsers.add_parser(
-            'issues',
-            help='Open the issues view',
-        )
-        parser.set_defaults(command='view_issues', page='')
+    subparser_view_issues = make_subparser(
+        Commands.view_issues, 'issues',
+        help='Open the issues view',
+    )
 
-    def subparser_new_issue(self, subparsers):
-        parser = subparsers.add_parser(
-            'new-issue',
-            aliases=['new_issue', 'issue-new'],
-            help='Open a page to create a new issue',
-        )
-        parser.set_defaults(command='new_issue', page='')
+    subparser_new_issue = make_subparser(
+        Commands.new_issue, 'new-issue', 'new_issue', 'issue-new',
+        help='Open a page to create a new issue',
+    )
 
-    def subparser_repo(self, subparsers):
-        parser = subparsers.add_parser(
-            'repo',
-            aliases=['browse'],
-            help='Open the main repository page',
-        )
-        parser.set_defaults(command='view_any', page='')
+    subparser_repo = make_subparser(
+        Commands.view_any, 'repo', 'browse',
+        help='Open the main repository page',
+        extra_defaults={'page': ''},
+    )
 
-    def subparser_branches(self, subparsers):
-        parser = subparsers.add_parser(
-            'branches',
-            help='Open the repository branches page',
-        )
-        parser.set_defaults(command='view_branches')
+    subparser_branches = make_subparser(
+        Commands.view_branches, 'branches',
+        help='Open the repository branches page',
+    )
 
-    def subparser_view_merge_requests(self, subparsers):
-        parser = subparsers.add_parser(
-            'prs',
-            aliases=['mrs', 'view_prs', 'view_mrs'],
-            help='Open the merge requests view',
-        )
-        parser.set_defaults(command='view_merge_requests', page='')
+    subparser_view_merge_requests = make_subparser(
+        Commands.view_merge_requests, 'prs', 'mrs', 'view_prs', 'view_mrs',
+        help='Open the merge requests view',
+    )
 
-    def subparser_view_pipelines(self, subparsers):
-        parser = subparsers.add_parser(
-            'pipelines',
-            aliases=['view_pipelines'],
-            help='Open the pipelines view',
-        )
-        parser.set_defaults(command='view_pipelines', page='')
+    subparser_view_pipelines = make_subparser(
+        Commands.view_pipelines, 'pipelines', 'view_pipelines',
+        help='Open the pipelines view',
+    )
 
-    def subparser_pr(self, subparsers):
-        parser = subparsers.add_parser(
-            'pr',
-            aliases=['mr', 'pull', 'merge'],
-            help='Create a merge request',
-        )
-        parser.set_defaults(command='create_merge_request')
-
+    @subparser_builder(
+        Commands.create_merge_request, 'pr', 'mr', 'pull', 'merge',
+        help='Create a merge request',
+    )
+    def subparser_pr(self, parser):
         parser.add_argument(
             '-t',
             '--target',
