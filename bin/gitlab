@@ -57,22 +57,29 @@ def resolve_ref(ref):
         return ref
 
 
-def open_url_command(path=None, *, url=None):
-    if int(path is None) + int(url is None) != 1:
-        raise ValueError('exactly one of path, url must be provided')
+class open_url_command:
+    def __init__(self, path=None, *, url=None):
+        if int(path is None) + int(url is None) != 1:
+            raise ValueError('exactly one of path, url must be provided')
 
-    if path is not None:
-        path_factory = path if callable(path) else lambda _: path
-        url_factory = lambda args: get_remote_url(args.remote) + '/' + path_factory(args)
-    else:
-        url_factory = url if callable(url) else lambda _: url
+        if path is not None:
+            path_factory = path if callable(path) else lambda _: path
+            url_factory = lambda args: get_remote_url(args.remote) + '/' + path_factory(args)
+        else:
+            url_factory = url if callable(url) else lambda _: url
 
-    def handler(args):
-        url = url_factory(args)
+        self._url_factory = url_factory
+
+    def get_url(self, args):
+        return self._url_factory(args)
+
+    def print_url(self, args):
+        print(self.get_url(args))
+
+    def visit_url(self, args):
+        url = self.get_url(args)
         print(url)
         browse(url)
-
-    return handler
 
 
 class Commands:
@@ -98,8 +105,15 @@ class Commands:
 
 
 def main(args):
-    handler = getattr(Commands, args.command)
-    handler(args)
+    if callable(args.command) or isinstance(args.command, open_url_command):
+        handler = args.command
+    else:
+        handler = getattr(Commands, args.command)
+
+    if args.print_only:
+        handler.print_url(args)
+    else:
+        handler.visit_url(args)
 
 
 class CliParserBuilder:
@@ -210,6 +224,13 @@ class CliParserBuilder:
     def build(self):
         parser = argparse.ArgumentParser(
             description='Open GitLab pages on your web browser'
+        )
+
+        parser.add_argument(
+            '-p',
+            '--print-only',
+            action='store_true',
+            help="don't open a browser; only print URLs to standard output",
         )
 
         parser.add_argument(
