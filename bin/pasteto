@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+#
+# paste clipboard contents to a file, then open it with the default editor
+#
+
+set -o nounset -o errexit -o pipefail
+
+clippaste() {
+    xclip -out -selection clipboard
+}
+
+dest=$1
+dir=$(dirname "$dest")
+mkdir -p "$dir"
+clippaste > "$dest"
+"$EDITOR" "$dest"
