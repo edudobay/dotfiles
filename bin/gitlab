@@ -148,7 +148,7 @@ def subparser_builder(*args, **kwargs):
 
 class CliParserBuilder:
     subparser_new_repo = make_subparser(
-        Commands.create_new_repo, 'new-repository', 'newrepo',
+        Commands.create_new_repo, 'repo-new', 'repo',
         help='Open a page to create a new repository',
     )
 
@@ -178,7 +178,7 @@ class CliParserBuilder:
     )
 
     subparser_new_issue = make_subparser(
-        Commands.new_issue, 'new-issue', 'new_issue', 'issue-new',
+        Commands.new_issue, 'issue', 'issue-new',
         help='Open a page to create a new issue',
     )
 
@@ -194,12 +194,12 @@ class CliParserBuilder:
     )
 
     subparser_view_merge_requests = make_subparser(
-        Commands.view_merge_requests, 'prs', 'mrs', 'view_prs', 'view_mrs',
+        Commands.view_merge_requests, 'prs', 'mrs',
         help='Open the merge requests view',
     )
 
     subparser_view_pipelines = make_subparser(
-        Commands.view_pipelines, 'pipelines', 'view_pipelines',
+        Commands.view_pipelines, 'pipelines',
         help='Open the pipelines view',
     )
 
