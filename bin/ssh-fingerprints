@@ -1,0 +1,241 @@
+#!/usr/bin/env python3
+
+import argparse
+import base64
+import contextlib
+import hashlib
+import os
+import re
+import subprocess
+import tempfile
+from functools import partial
+
+run = partial(
+    subprocess.run,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    check=True,
+)
+
+def colon_separated(b):
+    return ':'.join('{:02x}'.format(byte) for byte in b)
+
+
+def base64_encoded(b):
+    return base64.b64encode(b).rstrip(b'=').decode('ascii')
+
+
+OUTPUT_FORMATS = {
+    'colon': colon_separated,
+    'base64': base64_encoded,
+}
+
+
+def with_prefix(prefix, value):
+    if value is None:
+        return ''
+
+    return prefix + value
+
+
+class HashVariants:
+    variants = {
+        'hash': {
+            'values': ['md5', 'sha1', 'sha256'],
+            'default': 'sha256',
+        },
+    }
+
+    SUPPORTS_OUTPUT = True
+
+    def __init__(self, hash, output=None):
+        self.hash = hash
+        self.output = output if self.SUPPORTS_OUTPUT else None
+
+    @property
+    def description(self):
+        modifiers = with_prefix('@', self.output)
+        return f'{self.DESCRIPTION}-{self.hash}{modifiers}'
+
+    def hash_representation(self, b):
+        if isinstance(b, str):
+            raise TypeError("text strings are not supported")
+        if not isinstance(b, bytes):
+            try:
+                b = b.digest()
+            except AttributeError:
+                raise TypeError("bytes or hash object expected")
+
+        if self.output is not None:
+            format = OUTPUT_FORMATS[self.output]
+        else:
+            if self.hash == 'md5':
+                format = OUTPUT_FORMATS['colon']
+            else:
+                format = OUTPUT_FORMATS['base64']
+
+        return format(b)
+
+
+class EC2PrivateKeyFingerprint(HashVariants):
+    DESCRIPTION = 'ec2-private'
+
+    def calculate(self, key):
+        data = run(
+            ['openssl', 'pkcs8', '-nocrypt', '-topk8', '-outform', 'DER'],
+            input=key.as_pkcs8(),
+        ).stdout
+        return self.hash_representation(hashlib.new(self.hash, data))
+
+
+class EC2PublicKeyFingerprint(HashVariants):
+    DESCRIPTION = 'ec2-public'
+
+    def calculate(self, key):
+        data = run(
+            ['openssl', 'pkey', '-pubout', '-outform', 'DER'],
+            input=key.as_pem(),
+        ).stdout
+        return self.hash_representation(hashlib.new(self.hash, data))
+
+
+class SSHPublicKeyFingerprint(HashVariants):
+    DESCRIPTION = 'ssh-public'
+    SUPPORTS_OUTPUT = False
+
+    def calculate(self, key):
+        data = run(
+            ['ssh-keygen', '-f', key.private_file, '-l', '-E', self.hash],
+        ).stdout
+
+        prefix = self.hash.upper() + ':'
+        result = data.split(b' ')[1].decode('ascii')
+        if result.startswith(prefix):
+            result = result[len(prefix):]
+        return result
+
+class Context(contextlib.ExitStack):
+    __instance = None
+
+    def __init__(self, temp_dir):
+        super().__init__()
+        self.enter_context(temp_dir)
+        # log.debug(f'Context initialized with directory {temp_dir.name}')
+        self.temp_dir = temp_dir
+
+    @classmethod
+    def make_default(cls):
+        temp_dir = tempfile.TemporaryDirectory()
+        os.chmod(temp_dir.name, 0o700)
+        return cls(temp_dir)
+
+    @classmethod
+    def instance(cls, base=None):
+        if isinstance(base, cls):
+            return base
+        if isinstance(cls.__instance, cls):
+            return cls.__instance
+
+        cls.__instance = cls.make_default()
+        return cls.__instance
+
+
+class KeyConverter:
+    def __init__(self, context: Context = None):
+        self._context = Context.instance(context)
+
+    def _openssh_convert(self, private_key_file, output_format, password=''):
+        with tempfile.NamedTemporaryFile(dir=self._context.temp_dir.name) as key_copy:
+            with open(private_key_file, 'rb') as key_original:
+                key_copy.write(key_original.read())
+            key_copy.seek(0, 0)
+            key_copy.flush()
+
+            proc = run([
+                'ssh-keygen', '-f', key_copy.name,
+                '-p',  # Change password - file will be overwritten
+                '-N', password,
+                '-m', output_format,
+            ], check=True)
+
+            return key_copy.read()
+
+    def openssh_to_pkcs8(self, private_key_file):
+        return self._openssh_convert(private_key_file, 'PKCS8')
+
+    def openssh_to_pem(self, private_key_file):
+        return self._openssh_convert(private_key_file, 'PEM')
+
+
+class Key:
+    def __init__(self, private_key_file, context: Context = None):
+        self._private_file = private_key_file
+        self._context = Context.instance(context)
+
+    @property
+    def private_file(self):
+        return self._private_file
+
+    def as_pkcs8(self):
+        return KeyConverter(self._context).openssh_to_pkcs8(self._private_file)
+
+    def as_pem(self):
+        return KeyConverter(self._context).openssh_to_pem(self._private_file)
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Calculate fingerprints for RSA SSH keys in various formats",
+    )
+
+    parser.add_argument(
+        'private_key_file',
+        metavar='FILE',
+        help="the PRIVATE key file",
+    )
+
+    parser.add_argument(
+        'check_fingerprint',
+        metavar='FINGERPRINT',
+        nargs='?',
+        help="a reference fingerprint to check against",
+    )
+
+    args = parser.parse_args()
+
+    # https://no-color.org/
+    color = os.getenv('NO_COLOR') is None
+
+    must_match = args.check_fingerprint is not None
+
+    with Context.instance():
+        key = Key(args.private_key_file)
+
+        fingerprint_types = [
+            cls(hash=hash, output=output)
+            for cls in [
+                EC2PrivateKeyFingerprint,
+                EC2PublicKeyFingerprint,
+                SSHPublicKeyFingerprint,
+            ]
+            for hash in ['sha256', 'sha1', 'md5']
+            for output in (
+                [None, 'colon']
+                if cls.SUPPORTS_OUTPUT and hash != 'md5'
+                else [None]
+            )
+        ]
+
+        for fingerprint in fingerprint_types:
+            result = fingerprint.calculate(key)
+            matched = must_match and args.check_fingerprint == result
+
+            msg = f'{fingerprint.description}\t{result}'
+            if matched:
+                msg = msg + '\t*'
+                if color:
+                    msg = '\x1b[1;32m' + msg + '\x1b[0;39m'  # bold green
+
+            print(msg)
+
+if __name__ == '__main__':
+    main()
