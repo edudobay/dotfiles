@@ -58,9 +58,8 @@ bind u set mouse
 # Allow 256-color mode, changing terminal window title and scrolling via PgUp/PgDn
 set -g terminal-overrides 'xterm*:colors=256:XT:smcup@:rmcup@'
 
-# I no longer remember why I needed this
-#set -g default-terminal "xterm-256color"
-set -g default-terminal "screen-256color"
+set-option -sa terminal-overrides ',xterm-256color:RGB'
+#set-option -sa terminal-overrides ',xterm-256color:Tc'
 
 # Pass through Ctrl modifiers
 setw -g xterm-keys on
@@ -73,5 +72,8 @@ set -g mouse on
 
 # Start non-login shells by default
 set -g default-command "${SHELL}"
+
+# Set terminal window title according to current window
+set -g set-titles on
 
 # vim:set ft=tmux:
