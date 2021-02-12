@@ -9,6 +9,8 @@ alias la='ls -lAh'
 
 alias le='less -FNXmq'
 
+alias ag='ag --hidden'
+
 # alias tmux='TERM=xterm-256color tmux'
 # alias mx='TERM=xterm-256color exec tmux'
 
