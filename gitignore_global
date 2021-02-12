@@ -1,6 +1,7 @@
 .directory
 Thumbs.db
 .DS_Store
+Icon[]
 
 *~
 *.swp
@@ -16,5 +17,7 @@ Thumbs.db
 .vscode/
 
 .php_cs.cache
+
+.mypy-cache/
 
 **/#*#
