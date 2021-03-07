@@ -5,6 +5,7 @@ if !exists("*plug#begin")
    finish
 endif
 
+let s:base_path = expand('<sfile>:p:h')
 let s:lateinit_scripts = []
 
 function! s:sourceLast(name)
@@ -45,7 +46,14 @@ Plug 'airblade/vim-gitgutter'
 
 " > Denite (Unite all interfaces)
 Plug 'Shougo/denite.nvim'
-call s:sourceLast(expand('<sfile>:p:h') . '/conf/denite.vim')
+call s:sourceLast(s:base_path . '/conf/denite.vim')
+
+" > fzf / Fuzzy finder and picker interfaces
+let $FZF_DEFAULT_COMMAND = 'rg --files'
+if isdirectory('/usr/local/opt/fzf')  " When fzf installed in a non-standard dir (macOS)
+   Plug '/usr/local/opt/fzf'
+endif
+Plug 'junegunn/fzf.vim'
 
 " > ack / ag
 Plug 'mileszs/ack.vim'
