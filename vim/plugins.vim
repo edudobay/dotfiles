@@ -38,7 +38,7 @@ let g:NERDTreeIgnore = ['\~$', '^__pycache__$', '\.pyc$']
 
 " > EditorConfig
 Plug 'editorconfig/editorconfig-vim'
-let g:EditorConfig_verbose = 1
+let g:EditorConfig_verbose = 0
 
 " > Git
 Plug 'tpope/vim-fugitive'
