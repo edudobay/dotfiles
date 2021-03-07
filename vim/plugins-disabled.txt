@@ -1,3 +1,7 @@
+" disabled 2021-03-06
+
+call dein#add('embear/vim-foldsearch')
+
 " -------------------------------------------------------------------------
 " disabled plugins
 

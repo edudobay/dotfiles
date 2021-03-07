@@ -1,9 +1,14 @@
 " local vimrc file
 " Maintainer:   Eduardo Dobay
 
-if filereadable(expand("~/dotfiles/vim/dein.vim"))
-   source ~/dotfiles/vim/dein.vim
+let s:plug_path = stdpath('data') . '/site/autoload/plug.vim'
+if !filereadable(s:plug_path)
+  silent exec "!curl -fLo " . s:plug_path . " --create-dirs "
+    \ . "https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
+  autocmd VimEnter * PlugInstall --sync | source ~/dotfiles/vimrc
 endif
+
+source ~/dotfiles/vim/plugins.vim
 
 set directory^=$HOME/.cache/vim/swapfiles//
 set hidden
