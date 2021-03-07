@@ -1,0 +1,11 @@
+snippet dic "Add constructor to DI"
+$di[${2:ClassName}::class] = function ($di) {
+    return new ${3:$2}(${4:args});
+};
+endsnippet
+
+snippet dil "Add constructor to DI"
+$di[${1:label}] = function ($di) {
+    return new ${3:ClassName}(${4:args});
+};
+endsnippet
