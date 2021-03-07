@@ -3,20 +3,20 @@ setlocal smartindent
 setlocal et sta
 
 function! PythonAddFunction()
-   let lnum = line('.')
-   let original = getline('.')
+  let lnum = line('.')
+  let original = getline('.')
 
-   call inputsave()
-   let name = input("Function name: ")
-   call inputrestore()
-   if name == ''
-      return
-   endif
-   
-   let text = 'def ' . name . '():'
+  call inputsave()
+  let name = input("Function name: ")
+  call inputrestore()
+  if name == ''
+    return
+  endif
 
-   call setline('.', original . text)
-   call cursor(lnum, col([lnum, '$'])-2)
+  let text = 'def ' . name . '():'
+
+  call setline('.', original . text)
+  call cursor(lnum, col([lnum, '$'])-2)
 endfunction
 
 inoremap <buffer> \'I def __init__(self):<cr>

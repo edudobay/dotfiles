@@ -2,8 +2,8 @@
 " https://github.com/Shougo/denite.nvim
 
 if executable('ag')
-   call denite#custom#var('file_rec', 'command',
-      \ ['ag', '--follow', '--nocolor', '--nogroup', '--hidden', '-g', ''])
+  call denite#custom#var('file_rec', 'command',
+        \ ['ag', '--follow', '--nocolor', '--nogroup', '--hidden', '-g', ''])
 endif
 
 " Because 'dd' is mapped, pressing 'd' forces us to wait a while.

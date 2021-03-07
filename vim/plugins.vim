@@ -1,21 +1,21 @@
 call plug#begin(stdpath('data') . '/plugged')
 
 if !exists("*plug#begin")
-   echoerr "Cannot initialize plugins: vim-plug could not be found"
-   finish
+  echoerr "Cannot initialize plugins: vim-plug could not be found"
+  finish
 endif
 
 let s:base_path = expand('<sfile>:p:h')
 let s:lateinit_scripts = []
 
 function! s:sourceLast(name)
-   call add(s:lateinit_scripts, a:name)
+  call add(s:lateinit_scripts, a:name)
 endfunction
 
 function! s:sourceLateInitScripts()
-   for script in s:lateinit_scripts
-      exec 'source ' . script
-   endfor
+  for script in s:lateinit_scripts
+    exec 'source ' . script
+  endfor
 endfunction
 
 autocmd VimEnter * call s:sourceLateInitScripts()
@@ -51,7 +51,7 @@ call s:sourceLast(s:base_path . '/conf/denite.vim')
 " > fzf / Fuzzy finder and picker interfaces
 let $FZF_DEFAULT_COMMAND = 'rg --files'
 if isdirectory('/usr/local/opt/fzf')  " When fzf installed in a non-standard dir (macOS)
-   Plug '/usr/local/opt/fzf'
+  Plug '/usr/local/opt/fzf'
 endif
 Plug 'junegunn/fzf.vim'
 

@@ -16,7 +16,7 @@ let s:plug_path = stdpath('data') . '/site/autoload/plug.vim'
 
 if !filereadable(s:plug_path)
   silent exec "!curl -fLo " . s:plug_path . " --create-dirs "
-    \ . "https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
+        \ . "https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim"
   autocmd VimEnter * PlugInstall --sync | source ~/dotfiles/vimrc
 endif
 
@@ -90,13 +90,13 @@ filetype plugin on
 let g:tex_flavor = 'latex'
 
 if !has("gui_running")
-   set mouse=a
-   if exists("$XTERM_SHELL") || exists("$COLORTERM") || stridx($TERM, "-256color") > 0
-      "set t_Co=256
-      call LoadColorTheme(g:ctermcolor)
-   endif
+  set mouse=a
+  if exists("$XTERM_SHELL") || exists("$COLORTERM") || stridx($TERM, "-256color") > 0
+    "set t_Co=256
+    call LoadColorTheme(g:ctermcolor)
+  endif
 endif
 
 if has('termguicolors')
-   set termguicolors
+  set termguicolors
 endif

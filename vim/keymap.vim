@@ -172,5 +172,5 @@ nnoremap <leader>, :exec getline(".")<cr>j
 
 " Terminal mode
 if has('nvim')
-   tnoremap <Esc> <C-\><C-n>
+  tnoremap <Esc> <C-\><C-n>
 endif
