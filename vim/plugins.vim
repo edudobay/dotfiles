@@ -73,6 +73,9 @@ Plug 'chrisbra/color_highlight'
 Plug 'bkad/CamelCaseMotion'
 let g:camelcasemotion_key = ','
 
+" > Change surroundings
+Plug 'tpope/vim-surround'
+
 " > Snippets
 Plug 'SirVer/ultisnips'
 Plug 'honza/vim-snippets'
