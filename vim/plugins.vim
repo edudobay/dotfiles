@@ -26,6 +26,9 @@ Plug 'rakr/vim-one'
 
 " ----------------------------------------------------------------------------
 
+" > vim-plug itself: make its docs available
+Plug 'junegunn/vim-plug'
+
 " > Airline
 Plug 'vim-airline/vim-airline'
 Plug 'vim-airline/vim-airline-themes'
