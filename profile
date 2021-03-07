@@ -24,3 +24,7 @@ unset user_dir_prepend
 
 export PATH
 
+# X Input Method -> necessary for .XCompose overrides
+export \
+    QT_IM_MODULE=xim \
+    GTK_IM_MODULE=xim
