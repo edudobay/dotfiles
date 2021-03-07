@@ -92,5 +92,8 @@ inoremap <c-x><c-k> <c-x><c-k>
 " > Multiple cursors
 Plug 'terryma/vim-multiple-cursors'
 
+" > Auto-close pairs (quotes, brackets, etc)
+Plug 'jiangmiao/auto-pairs'
+
 " ----------------------------------------------------------------------------
 call plug#end()
