@@ -5,6 +5,7 @@ antigen use oh-my-zsh
 
 antigen bundle git
 antigen bundle pip
+antigen bundle fzf
 
 antigen bundle zsh-users/zsh-syntax-highlighting
 
@@ -23,4 +24,5 @@ done
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
 
 # Avoid an initial error status
+## 15 Aug 2020 - might conflict with completion system but it works this way
 true
