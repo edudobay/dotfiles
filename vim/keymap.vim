@@ -2,7 +2,6 @@
 " General
 let mapleader = ' '
 
-noremap Y <Nop>
 inoremap <C-]> <Esc>
 
 " Swap : and ; in normal & visual modes — : is much more common
@@ -21,6 +20,12 @@ nnoremap <s-left> vB
 nnoremap <s-right> vE
 
 " ----------------------------------------------------------------------------
+" Copy/paste
+
+" Y - Instead of doing the same as yy, copy to clipboard
+noremap Y "+y
+
+" ----------------------------------------------------------------------------
 " Editing
 
 " Delete HTML tag (tip #1304)
@@ -34,8 +39,10 @@ inoremap <A-o> <c-O>$<cr>
 " Opening, writing, quitting
 nnoremap <F2>      :w<cr>
 inoremap <F2>      <c-O>:w<cr>
-nnoremap <leader>W :wa<cr>
-nnoremap <leader>N :enew<cr>
+" <leader>fW - file write
+nnoremap <leader>fW :wa<cr>
+" <leader>fW - file new
+nnoremap <leader>fN :enew<cr>
 
 " Tabs
 nnoremap <leader>T :tabe 
@@ -54,8 +61,10 @@ nnoremap <leader>_ :split<cr>
 nnoremap <leader>h :split 
 nnoremap <leader>w <c-w>w
 nnoremap <leader>\w <c-w>W
-nnoremap <c-w>; <c-w>p
 nnoremap <leader><space> <c-^>
+" <leader>lw - last window
+nnoremap <leader>lw <c-w>p
+nnoremap <c-w>; <c-w>p
 
 nnoremap <c-up> <c-w>k
 nnoremap <c-down> <c-w>j
@@ -84,6 +93,8 @@ nnoremap <leader>o, :NERDTreeFind<cr>
 nnoremap <leader>oo :NERDTreeToggle<cr>
 nnoremap <leader>on :NERDTree ~/Dropbox/Notas/<cr>
 nnoremap <leader>oj :NERDTree ~/Dropbox/Notas/gadle/journal<cr>Gk
+" <leader>oS = open settings
+nnoremap <leader>oS :NERDTree ~/dotfiles/vim/<cr>G
 
 " Denite
 nnoremap <leader>ff :Denite file/rec<CR>
@@ -128,13 +139,11 @@ nnoremap <leader>'lb :set linebreak! lbr?<cr>
 nnoremap <leader>'ww :set wrap! wrap?<cr>
 nnoremap <F11>       :set wrap! wrap?<cr>
 
-nnoremap <leader>'qm :call QuoteMappings#toggle()<cr>
-
 " ----------------------------------------------------------------------------
 " Git (Fugitive) commands
-nnoremap <leader>gs :Gstatus<cr>
-nnoremap <leader>gc :Gcommit --verbose<cr>
-nnoremap <leader>g!c :Gcommit --amend --verbose<cr>
+nnoremap <leader>gs :Git<cr>
+nnoremap <leader>gc :Git commit --verbose<cr>
+nnoremap <leader>g!c :Git commit --amend --verbose<cr>
 
 " ----------------------------------------------------------------------------
 " Misc insertions
