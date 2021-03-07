@@ -39,3 +39,6 @@ function yarn() {
 
 # Path for current project
 path+=(./node_modules/.bin)
+
+# Always load bin for globally installed Yarn packages
+path+=(~/.yarn/bin)
