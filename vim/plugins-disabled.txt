@@ -1,0 +1,112 @@
+" -------------------------------------------------------------------------
+" disabled plugins
+
+'Shougo/neosnippet.vim'
+'Shougo/neosnippet-snippets'
+
+'vim-scripts/camelcasemotion.git'
+'vim-scripts/matchit.zip.git'
+
+call dein#add('Valloric/YouCompleteMe')
+let g:ycm_python_binary_path = 'python'
+let g:ycm_server_python_interpreter = '/usr/bin/python2'
+
+" ### Language support
+"
+'zaiste/tmux.vim.git'
+'gabrielelana/vim-markdown'
+'pangloss/vim-javascript'
+'itspriddle/vim-jquery.git'
+'etaoins/vim-volt-syntax.git'
+'jtratner/vim-flavored-markdown.git'
+'kchmck/vim-coffee-script'
+'git://git.code.sf.net/p/vim-latex/vim-latex'
+'JuliaLang/julia-vim'
+
+" * Slim templating engine <http://slim-lang.com>
+'slim-template/vim-slim'
+
+" * JavaScript with ES6 support
+'othree/yajs.vim'
+
+" ### Color schemes
+'KabbAmine/yowish.vim'
+'noahfrederick/vim-hemisu'
+'junegunn/seoul256.vim'
+'29decibel/codeschool-vim-theme'
+'morhetz/gruvbox'
+'altercation/vim-colors-solarized.git'
+'xolox/vim-colorscheme-switcher'
+'vim-scripts/BusyBee'
+'vim-scripts/proton'
+'vim-scripts/summerfruit256.vim'
+
+" -------------------------------------------------------------------------
+" Stuff from YADR
+
+'AndrewRadev/splitjoin.vim'
+'briandoll/change-inside-surroundings.vim.git'
+'godlygeek/tabular'
+'tomtom/tcomment_vim.git'
+'vim-scripts/IndexedSearch'
+
+'tpope/vim-bundler'
+
+'Raimondi/delimitMate'
+'nelstrom/vim-visual-star-search'
+'skwp/vim-easymotion'
+
+" Tabbable snippets
+'garbas/vim-snipmate.git'
+'honza/vim-snippets'
+
+" General vim improvements
+'chrisbra/NrrwRgn'
+'MarcWeber/vim-addon-mw-utils.git'
+'bogado/file-line.git'
+'majutsushi/tagbar.git'
+'skwp/greplace.vim'
+'skwp/vim-conque'
+'tomtom/tlib_vim.git'
+'tpope/vim-abolish'
+'tpope/vim-endwise.git'
+'tpope/vim-repeat.git'
+'tpope/vim-surround.git'
+'vim-scripts/AnsiEsc.vim.git'
+'vim-scripts/sudo.vim'
+'xsunsmile/showmarks.git'
+
+'skwp/YankRing.vim'
+let g:yankring_history_dir = "~/.cache/vim"
+
+"vim-misc is required for vim-session
+'xolox/vim-misc'
+'xolox/vim-session'
+let g:session_autosave = 0
+
+'terryma/vim-multiple-cursors'
+'jistr/vim-nerdtree-tabs.git'
+'kien/ctrlp.vim'
+'mattn/webapi-vim.git'
+'rking/ag.vim'
+'scrooloose/syntastic.git'
+'sjl/gundo.vim'
+'tpope/vim-ragtag'
+'tpope/vim-unimpaired'
+'vim-scripts/AutoTag.git'
+'vim-scripts/lastpos.vim'
+
+" Text objects
+'austintaylor/vim-indentobject'
+'coderifous/textobj-word-column.vim'
+'kana/vim-textobj-user'
+'lucapette/vim-textobj-underscore'
+'nathanaelkane/vim-indent-guides'
+'vim-scripts/argtextobj.vim'
+
+'bootleq/vim-textobj-rubysymbol'
+'kana/vim-textobj-datetime'
+'kana/vim-textobj-entire'
+'kana/vim-textobj-function'
+'nelstrom/vim-textobj-rubyblock'
+'thinca/vim-textobj-function-javascript'

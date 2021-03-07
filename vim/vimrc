@@ -1,0 +1,85 @@
+" local vimrc file
+" Maintainer:   Eduardo Dobay
+
+if filereadable(expand("~/dotfiles/vim/dein.vim"))
+   source ~/dotfiles/vim/dein.vim
+endif
+
+set directory^=$HOME/.cache/vim/swapfiles//
+set hidden
+set nobackup
+
+" Enable reading of modelines
+set modeline
+
+set expandtab
+set smarttab
+set autoindent
+set smartindent
+set shiftwidth=4
+set tabstop=4
+
+" always show a status line, even with only one window
+set laststatus=2
+
+set showcmd
+
+set wildmode=full
+set wildmenu
+set wildcharm=<C-Z>
+set wildignorecase
+
+set ignorecase
+set smartcase
+set incsearch
+set hlsearch
+nohl
+
+set number
+set relativenumber
+set linebreak
+" let &showbreak=' '
+set scrolloff=1
+set display+=lastline
+
+" Pretty 'list' mode
+set listchars=eol:¬,tab:→\ ,trail:·,extends:»,precedes:«,nbsp:⍽
+
+set nrformats-=octal
+
+" Remove extra comment delimiters when joining lines
+set formatoptions+=j
+
+set ttimeout
+set ttimeoutlen=50
+
+" Open buffers with no folds closed
+" See: http://vim.wikia.com/wiki/All_folds_open_when_opening_a_file
+set foldlevelstart=99
+
+" Highlight trailing whitespace
+match ErrorMsg '\s\+$'
+
+source ~/dotfiles/vim/keys.vim
+source ~/dotfiles/vim/keymap.vim
+
+source ~/dotfiles/vim/functions.vim
+
+au WinLeave * call CursorLCHighlight(0)
+au WinEnter * call CursorLCHighlight(1)
+
+filetype plugin on
+
+let g:tex_flavor = 'latex'
+
+if !has("gui_running")
+   set mouse=a
+   if exists("$XTERM_SHELL") || exists("$COLORTERM") || stridx($TERM, "-256color") > 0
+      "set t_Co=256
+      call LoadColorTheme(g:ctermcolor)
+   endif
+endif
+
+if has('termguicolors')
+   set termguicolors
+endif
