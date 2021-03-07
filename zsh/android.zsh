@@ -1,4 +1,5 @@
 for dir in \
+    "$ANDROID_HOME" \
     $HOME/Library/Android/sdk \
     $HOME/Android/Sdk;
 do
