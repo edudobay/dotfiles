@@ -21,13 +21,16 @@ endfunction
 autocmd VimEnter * call s:sourceLateInitScripts()
 
 " ----------------------------------------------------------------------------
-" Colorschemes
-Plug 'rakr/vim-one'
-
-" ----------------------------------------------------------------------------
+" ## Plugin management
 
 " > vim-plug itself: make its docs available
 Plug 'junegunn/vim-plug'
+
+" ----------------------------------------------------------------------------
+" ## Visual / Color schemes
+
+" > Color scheme: 'one'
+Plug 'rakr/vim-one'
 
 " > Airline
 Plug 'vim-airline/vim-airline'
@@ -35,17 +38,55 @@ Plug 'vim-airline/vim-airline-themes'
 let g:airline_powerline_fonts = 1
 let g:airline#extensions#whitespace#checks = [ 'indent' ]
 
-" > NERDTree
-Plug 'scrooloose/nerdtree'
-let g:NERDTreeIgnore = ['\~$', '^__pycache__$', '\.pyc$']
+" ----------------------------------------------------------------------------
+" ## Language support
+
+" > Load syntax for many languages on demand
+Plug 'sheerun/vim-polyglot'
+
+" > Syntax highlighting for roamer, the plain text file manager
+" https://github.com/abaldwin88/roamer
+Plug 'abaldwin88/roamer.vim'
+
+" > Highlight color names in the same color they represent
+Plug 'chrisbra/color_highlight'
+
+" ----------------------------------------------------------------------------
+" ## Editing features
 
 " > EditorConfig
 Plug 'editorconfig/editorconfig-vim'
 let g:EditorConfig_verbose = 0
 
-" > Git
-Plug 'tpope/vim-fugitive'
-Plug 'airblade/vim-gitgutter'
+" > Camel case motion
+Plug 'bkad/CamelCaseMotion'
+let g:camelcasemotion_key = ','
+
+" > Change surroundings
+Plug 'tpope/vim-surround'
+
+" > Multiple cursors
+Plug 'terryma/vim-multiple-cursors'
+
+" > Auto-close pairs (quotes, brackets, etc)
+Plug 'jiangmiao/auto-pairs'
+
+" > Snippets
+Plug 'SirVer/ultisnips'
+Plug 'honza/vim-snippets'
+let g:UltiSnipsExpandTrigger = "<tab>"
+let g:UltiSnipsListSnippets = "<s-tab>"
+let g:UltiSnipsJumpForwardTrigger = "<c-j>"
+let g:UltiSnipsJumpBackwardTrigger = "<c-k>"
+let g:UltiSnipsSnippetStorageDirectoryForUltiSnipsEdit = s:base_path . '/UltiSnips'
+inoremap <c-x><c-k> <c-x><c-k>
+
+" ----------------------------------------------------------------------------
+" ## External programs and interfaces
+
+" > NERDTree
+Plug 'scrooloose/nerdtree'
+let g:NERDTreeIgnore = ['\~$', '^__pycache__$', '\.pyc$']
 
 " > Denite (Unite all interfaces)
 Plug 'Shougo/denite.nvim'
@@ -62,38 +103,9 @@ Plug 'junegunn/fzf.vim'
 Plug 'mileszs/ack.vim'
 let g:ackprg = 'ag --nogroup --nocolor --column --hidden'
 
-" > Load syntax for many languages on demand
-Plug 'sheerun/vim-polyglot'
-
-" > Syntax highlighting for roamer, the plain text file manager
-" https://github.com/abaldwin88/roamer
-Plug 'abaldwin88/roamer.vim'
-
-" > Highlight color names in the same color they represent
-Plug 'chrisbra/color_highlight'
-
-" > Camel case motion
-Plug 'bkad/CamelCaseMotion'
-let g:camelcasemotion_key = ','
-
-" > Change surroundings
-Plug 'tpope/vim-surround'
-
-" > Snippets
-Plug 'SirVer/ultisnips'
-Plug 'honza/vim-snippets'
-let g:UltiSnipsExpandTrigger = "<tab>"
-let g:UltiSnipsListSnippets = "<s-tab>"
-let g:UltiSnipsJumpForwardTrigger = "<c-j>"
-let g:UltiSnipsJumpBackwardTrigger = "<c-k>"
-let g:UltiSnipsSnippetStorageDirectoryForUltiSnipsEdit = s:base_path . '/UltiSnips'
-inoremap <c-x><c-k> <c-x><c-k>
-
-" > Multiple cursors
-Plug 'terryma/vim-multiple-cursors'
-
-" > Auto-close pairs (quotes, brackets, etc)
-Plug 'jiangmiao/auto-pairs'
+" > Git
+Plug 'tpope/vim-fugitive'
+Plug 'airblade/vim-gitgutter'
 
 " ----------------------------------------------------------------------------
 call plug#end()
