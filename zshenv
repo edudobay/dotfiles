@@ -27,3 +27,5 @@ typeset -xU PATH
 
 # 13 Apr 2020: Added "temporarily" to solve this issue. Don't know now of a better place
 export QT_QPA_PLATFORMTHEME="qt5ct"
+
+[[ -f $HOME/.zshenv.local ]] && source $HOME/.zshenv.local
