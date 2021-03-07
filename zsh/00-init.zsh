@@ -3,3 +3,6 @@ for dir in /code /Volumes/Code; do
 		CODE_ROOT=$dir
 	fi
 done
+
+autoload -Uz compinit && compinit
+autoload -U bashcompinit && bashcompinit
