@@ -73,6 +73,7 @@ Plug 'chrisbra/color_highlight'
 Plug 'bkad/CamelCaseMotion'
 let g:camelcasemotion_key = ','
 
+" > Snippets
 Plug 'SirVer/ultisnips'
 Plug 'honza/vim-snippets'
 let g:UltiSnipsExpandTrigger = "<tab>"
@@ -80,8 +81,10 @@ let g:UltiSnipsListSnippets = "<s-tab>"
 let g:UltiSnipsJumpForwardTrigger = "<c-j>"
 let g:UltiSnipsJumpBackwardTrigger = "<c-k>"
 let g:UltiSnipsSnippetStorageDirectoryForUltiSnipsEdit = s:base_path . '/UltiSnips'
-
 inoremap <c-x><c-k> <c-x><c-k>
+
+" > Multiple cursors
+Plug 'terryma/vim-multiple-cursors'
 
 " ----------------------------------------------------------------------------
 call plug#end()
