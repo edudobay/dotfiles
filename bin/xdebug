@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+set -o nounset -o errexit -o pipefail
+
+VERBOSE=${VERBOSE-1}
+config_file=/etc/php/conf.d/xdebug.ini
+
+VERBOSE() {
+    if [[ $VERBOSE = 1 ]]; then
+        echo 1>&2 "$@"
+    fi
+}
+
+case "${1-}" in
+    on)
+        VERBOSE "Enabling xdebug extension in $config_file"
+        sudo sed -i '/zend_extension=xdebug\.so/s/^;\+\s*//' "$config_file"
+        ;;
+    off)
+        VERBOSE "Disabling xdebug extension in $config_file"
+        sudo sed -i '/zend_extension=xdebug\.so/s/^/;/' "$config_file"
+        ;;
+    config)
+        grep -v '^;' "$config_file" || \
+            if [[ $? -ne 1 ]]; then
+                exit $?
+            fi
+        ;;
+    *)
+        echo 1>&2 "ERROR: usage: $0 {on|off|config}"
+        exit 1
+esac
