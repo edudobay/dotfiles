@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+import argparse
+import json
+import os
+import shlex
+import sys
+from typing import Optional
+
+def build_configuration(
+    token: str,
+    domain: str,
+    username: Optional[str] = None,
+) -> dict:
+    if username is None:
+        domain_config = token
+    else:
+        domain_config = {"username": username, "token": token}
+
+    return {
+        "gitlab-token": {
+            domain: domain_config,
+        }
+    }
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="""
+            Build the JSON configuration for authenticating at a GitLab server with Composer (PHP
+            package manager).
+        """,
+        epilog="""
+            Token must be provided via stdin.
+        """
+    )
+    parser.add_argument(
+        '--username',
+        '-u',
+        help="""
+            specify an username if it is required for this token (usually required for deploy
+            tokens)
+        """,
+    )
+    parser.add_argument(
+        '--domain',
+        '-d',
+        help='specify the domain for the GitLab instance (default: %(default)s)',
+        default='gitlab.com',
+    )
+    parser.add_argument(
+        '--export',
+        dest='format',
+        action='store_const',
+        const='shell_export',
+        help="""
+            output in 'export VARIABLE=value' format, convenient for pasting in the shell or inside
+            'eval $(...)'
+        """
+    )
+    args = parser.parse_args()
+
+    token = sys.stdin.read().strip()
+    config = build_configuration(
+        token=token,
+        domain=args.domain,
+        username=args.username,
+    )
+
+    # Compact encoding
+    value = json.dumps(config, separators=(',', ':'))
+
+    if args.format == 'shell_export':
+        print(f"export COMPOSER_AUTH={shlex.quote(value)}")
+    else:
+        print(value)
+
+if __name__ == "__main__":
+    main()
