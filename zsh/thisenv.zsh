@@ -1,8 +1,18 @@
 _thisenv_DEFAULT_DEPTH=5
 
 _thisenv_activate_env_root() {
-  local dir venv
+  local dir venv script
   dir=$1
+
+  for script in \
+    activate activate.sh bin/activate
+  do
+    if [[ ( -f $script ) && ( -x $script ) ]]; then
+      echo "Activating environment via script $(realpath $script)"
+      source $script
+      return 0
+    fi
+  done
 
   for venv in \
     venv .venv virtualenv .virtualenv env .env
@@ -43,7 +53,7 @@ thisenv() {
       d)
         depth=$OPTARG
         if [[ ! $depth =~ '^[0-9]+$' ]]; then
-          echo "Error: invalid depth (must be a number): $depth" 1>&2
+          echo 1>&2 "Error: invalid depth (must be a number): $depth" 1>&2
           return 2
         fi
         ;;
@@ -64,7 +74,7 @@ thisenv() {
     let depth--
   done
 
-  echo "No virtual environment found here"
+  echo 1>&2 "No environment found to activate here"
   return 1
 }
 
