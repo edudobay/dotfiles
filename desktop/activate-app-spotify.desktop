@@ -1,0 +1,13 @@
+#!/usr/bin/env xdg-open
+# Install-To: ~/.local/share/applications/
+[Desktop Entry]
+Type=Application
+Name=Activate Spotify
+Comment=Activate Spotify window or start it if not running
+Icon=spotify-client
+TryExec=activate-app
+Exec=activate-app spotify %U
+Terminal=false
+MimeType=x-scheme-handler/spotify;
+Categories=Audio;Music;Player;AudioVideo;
+StartupWMClass=spotify
