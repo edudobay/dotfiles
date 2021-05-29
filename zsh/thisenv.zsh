@@ -7,7 +7,7 @@ _thisenv_activate_env_root() {
   for script in \
     activate activate.sh bin/activate
   do
-    if [[ ( -f $script ) && ( -x $script ) ]]; then
+    if [[ ( -f $script ) ]]; then
       echo "Activating environment via script $(realpath $script)"
       source $script
       return 0
