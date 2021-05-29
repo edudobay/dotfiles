@@ -3,8 +3,6 @@ source ~/dotfiles/vim/gui-functions.vim
 " Remove graphic tabs, toolbars, menus, scrollbars from GUI
 set go-=e go-=T go-=m go-=r go-=L
 
-set keywordprg=xterm\ -e\ man
-
 let &guifont = g:guifont
 "let g:airline_theme_map['hybrid.*'] = 'base16_railscasts'
 
