@@ -22,6 +22,11 @@ def parse():
         help='separate entries by NUL (\\0) instead of newline'
     )
 
+    parser.add_argument(
+        'directories', nargs='*', default=['.'], metavar='DIR',
+        help='directories where to start scanning [default: .]'
+    )
+
     args = parser.parse_args()
     return args
 
@@ -43,10 +48,13 @@ def find_child_repos(root, max_depth):
 def main():
     args = parse()
     separator = '\0' if args.null_separator else '\n'
-    dirs = find_child_repos('.', args.depth)
 
-    for subdir in dirs:
-        print(subdir, end=separator)
+    for root in args.directories:
+        dirs = find_child_repos(root, args.depth)
+
+        for subdir in dirs:
+            print(subdir, end=separator)
+
 
 if __name__ == '__main__':
     try:

@@ -1,5 +1,5 @@
-alias gfa="git-allrepos -0 | xargs -0 -P7 -I\% bash -c '(cd %; git fetch --prune || { echo -e \"\\e[1;31mFailed: %\\e[0;39m\"; false; })'"
-alias gmall="git-allrepos -0 | xargs -0 -n1 -I\% bash -c '(cd %; echo %; git merge --ff-only; echo)'"
+alias gfa="git-allrepos -0 | xargs -0 -P7 -I\% bash -c 'git -C % fetch --prune || { echo -e \"\\e[1;31mFailed: %\\e[0;39m\"; false; }'"
+alias gmall="git-allrepos -0 | xargs -0 -n1 -I\% bash -c 'echo %; git -C % merge --ff-only; echo'"
 alias gf="git fetch --prune"
 
 # So many aliases!!!1 (From oh-my-zsh git plugin)
