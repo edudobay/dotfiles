@@ -44,6 +44,8 @@ let g:airline#extensions#whitespace#checks = [ 'indent' ]
 " > Load syntax for many languages on demand
 Plug 'sheerun/vim-polyglot'
 
+Plug 'pearofducks/ansible-vim'
+
 " > Syntax highlighting for roamer, the plain text file manager
 " https://github.com/abaldwin88/roamer
 Plug 'abaldwin88/roamer.vim'
