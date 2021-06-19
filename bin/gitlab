@@ -57,6 +57,10 @@ def resolve_ref(ref):
         return ref
 
 
+def resolve_ref_as_commit(ref) -> str:
+    return git(['rev-parse', ref]).strip()
+
+
 class open_url_command:
     def __init__(self, path=None, *, url=None):
         if int(path is None) + int(url is None) != 1:
@@ -89,7 +93,10 @@ class Commands:
     view_merge_requests = open_url_command('-/merge_requests')
     view_pipelines = open_url_command('-/pipelines')
     view_any = open_url_command(lambda args: args.page.lstrip('/'))
-    view_tree = open_url_command(lambda args: '/tree/' + resolve_ref(args.ref))
+    view_tree = open_url_command(lambda args: '-/tree/' + resolve_ref(args.ref))
+    view_commit = open_url_command(
+        lambda args: '-/commit/' + resolve_ref_as_commit(resolve_ref(args.ref))
+    )
     view_branches = open_url_command('-/branches')
 
     def _create_merge_request_path(args):
@@ -167,6 +174,16 @@ class CliParserBuilder:
         help='Open the repository file tree for a given ref (branch, commit, tag)',
     )
     def subparser_tree(self, parser):
+        parser.add_argument(
+            'ref', nargs='?', default=None,
+            help='Select a ref (default: current branch, or commit if detached)'
+        )
+
+    @subparser_builder(
+        Commands.view_commit, 'commit',
+        help='Open the repository commit view for a given ref (branch, commit, tag)',
+    )
+    def subparser_commit(self, parser):
         parser.add_argument(
             'ref', nargs='?', default=None,
             help='Select a ref (default: current branch, or commit if detached)'
