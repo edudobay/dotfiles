@@ -133,7 +133,7 @@ class Commands:
     create_merge_request = open_url_command(_create_merge_request_path)
 
 
-def main(args):
+def main_handler(args):
     if callable(args.command) or isinstance(args.command, open_url_command):
         handler = args.command
     else:
@@ -306,7 +306,7 @@ class CliParserBuilder:
             if method_name.startswith('subparser_')
         ]
 
-def cli_main():
+def main():
     parser = CliParserBuilder().build()
     args = parser.parse_args()
 
@@ -314,8 +314,8 @@ def cli_main():
         parser.print_usage()
         sys.exit(1)
 
-    main(args)
+    main_handler(args)
 
 
 if __name__ == '__main__':
-    cli_main()
+    main()

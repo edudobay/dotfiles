@@ -46,18 +46,18 @@ def find_child_repos(root, max_depth):
     return sorted(candidates_from(root, max_depth))
 
 def main():
-    args = parse()
-    separator = '\0' if args.null_separator else '\n'
+    try:
+        args = parse()
+        separator = '\0' if args.null_separator else '\n'
 
-    for root in args.directories:
-        dirs = find_child_repos(root, args.depth)
+        for root in args.directories:
+            dirs = find_child_repos(root, args.depth)
 
-        for subdir in dirs:
-            print(subdir, end=separator)
+            for subdir in dirs:
+                print(subdir, end=separator)
+    except KeyboardInterrupt:
+        pass
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        pass
+    main()

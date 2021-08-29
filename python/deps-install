@@ -4,4 +4,4 @@ set -o nounset -o errexit -o pipefail
 
 dir="$(dirname "$0")"
 
-python-novenv -m pip install --user -r "$dir/requirements.in"
+python-novenv -m pip install --user -e "$dir"
