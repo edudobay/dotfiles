@@ -99,6 +99,28 @@ class Commands:
     )
     view_branches = open_url_command('-/branches')
 
+    def _create_settings_path(args):
+        page = re.sub(r'[ -_/]+', '_', args.page.lower())
+
+        pages = {
+            'general': 'edit',
+            'integrations': '-/settings/integrations',
+            'webhooks': '-/hooks',
+            'access_tokens': '-/settings/access_tokens',
+            'repository': '-/settings/repository',
+            'ci_cd': '-/settings/ci_cd',
+            'monitor': '-/settings/operations',
+            'operations': '-/settings/operations',
+            'pages': 'pages',
+            'packages': '-/settings/packages_and_registries',
+            'registries': '-/settings/packages_and_registries',
+            'packages_and_registries': '-/settings/packages_and_registries',
+        }
+
+        return pages[page]
+
+    view_settings = open_url_command(_create_settings_path)
+
     def _create_merge_request_path(args):
         params = {
             'merge_request[source_branch]': args.source_branch or get_current_branch(),
@@ -188,6 +210,13 @@ class CliParserBuilder:
             'ref', nargs='?', default=None,
             help='Select a ref (default: current branch, or commit if detached)'
         )
+
+    @subparser_builder(
+        Commands.view_settings, 'settings',
+        help='Open one of the repository settings pages',
+    )
+    def subparser_settings(self, parser):
+        parser.add_argument('page')
 
     subparser_view_issues = make_subparser(
         Commands.view_issues, 'issues',
