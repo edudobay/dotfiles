@@ -1,5 +1,7 @@
 import importlib
 import pkgutil
+import os
+import subprocess
 
 
 def find_available_console_scripts():
@@ -21,3 +23,17 @@ def find_available_console_scripts():
         for module in modules
         if hasattr(module, "main") and callable(getattr(module, "main"))
     ]
+
+
+def find_version() -> str:
+    """
+    Version will be date of last commit, in YYYYMMDD format.
+    """
+    cmd = subprocess.run(
+        ['git', 'log', '-n1', '--format=%cs'],
+        cwd=os.path.dirname(__file__),
+        capture_output=True,
+        text=True,
+    )
+    date = cmd.stdout.strip()
+    return date.replace('-', '')
