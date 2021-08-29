@@ -41,6 +41,9 @@ let g:airline#extensions#whitespace#checks = [ 'indent' ]
 " ----------------------------------------------------------------------------
 " ## Language support
 
+" https://github.com/neoclide/coc.nvim
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
+
 " > Load syntax for many languages on demand
 Plug 'sheerun/vim-polyglot'
 
