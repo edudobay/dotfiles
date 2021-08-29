@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+set -o nounset -o errexit -o pipefail
+
+dir="$(dirname "$0")"
+
+OLDIFS=$IFS
+IFS=$'\n'
+pythons="$(which -a python3)"
+IFS=$OLDIFS
+
+for python in ${pythons[@]}; do
+    if "$python" -c "import sys; sys.exit(int(sys.prefix != sys.base_prefix))"; then
+        echo "$python"
+        exit 0
+    fi
+done
+
+exit 1

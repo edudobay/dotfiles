@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# python-novenv: Run 'python' but with the first non-virtualenv Python 3 interpreter found in the PATH.
+
+set -o nounset -o errexit -o pipefail
+
+PATH="$PATH:$(dirname "$0")"
+
+"$(find-python-novenv)" "$@"
