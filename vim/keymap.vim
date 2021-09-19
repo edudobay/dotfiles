@@ -25,6 +25,10 @@ nnoremap <s-right> vE
 " Y - Instead of doing the same as yy, copy to clipboard
 noremap Y "+y
 
+" yp - copy path
+nnoremap <leader>ypp :call CopyPathToClipboard()<cr>
+nnoremap <leader>ypa :call CopyPathToClipboard('absolute')<cr>
+
 " ----------------------------------------------------------------------------
 " Editing
 

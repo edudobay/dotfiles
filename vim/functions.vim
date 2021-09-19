@@ -134,3 +134,16 @@ function! CursorLCHighlight(state)
     set cul
   endif
 endfunction
+
+function! CopyPathToClipboard(format = 'relative')
+  if a:format == 'relative'
+    let path = expand('%')
+  elseif a:format == 'absolute'
+    let path = expand('%:p')
+  else
+    echoerr "CopyPathToClipboard: invalid format: " . a:format
+    return
+  endif
+  call setreg('+', path)
+  echo "Path copied to clipboard: " . path
+endfunction
