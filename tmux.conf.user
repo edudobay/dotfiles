@@ -25,6 +25,9 @@ bind S command-prompt -p ssh: "new-window -n %1 'ssh %1'"
 # Expand current pane
 bind Z resize-pane -Z
 
+# Synchronize panes: broadcast keys to all panes in current window
+bind-key s set-window-option synchronize-panes\; display-message "synchronize-panes is now #{?pane_synchronized,on,off}"
+
 # Session/window/pane switching
 # -----------------------------
 # Switch to last client
