@@ -115,6 +115,8 @@ command! ChmodX call ChmodExecutable()
 
 command! Trim call TrimTrailingWhitespace()
 
+command! Conflicts Ack '^[<>]{7}'
+
 function! OpenURL(url, ...)
   let list = [a:url] + a:000
   let cmd = g:browser . ' "' . join(list, '" "') . '" &'
