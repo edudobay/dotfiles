@@ -49,6 +49,21 @@ class BranchReport:
             return self.repo < other.repo
         raise NotImplemented
 
+    def is_in_sync_with_upstream(self) -> bool:
+        return (
+            self.upstream is not None
+            and not self.gone
+            and (self.ahead is None or self.ahead == 0)
+            and (self.behind is None or self.behind == 0)
+        )
+
+    def is_default_branch(self) -> bool:
+        return (
+            self.upstream is not None
+            and self.upstream.endswith(self.branch)
+            and self.branch in ('main', 'master')  # TODO
+        )
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -56,6 +71,14 @@ def main():
         help=f"""
             One or more directories where repositores are located.
             If absent, the git configuration '{CONFIG_NAME}' will be used.
+        """
+    )
+    parser.add_argument(
+        '-d', '--include-dirty',
+        action='store_true',
+        help="""
+            Include dirty repositories: those where the checked out branch is not
+            the main branch and/or is not in sync with its upstream branch.
         """
     )
     args = parser.parse_args()
@@ -109,7 +132,15 @@ def main():
         )
 
         score = ahead + behind
-        results.append((score, report))
+
+        is_dirty = not (
+            report.is_in_sync_with_upstream()
+            and report.is_default_branch()
+        )
+        include_result = args.include_dirty or is_dirty
+
+        if include_result:
+            results.append((score, report))
 
     results.sort(reverse=True)
     def as_table(results):
