@@ -121,6 +121,11 @@ nnoremap    <F4> :nohl<cr>
 nnoremap  <s-F4> :let @/ = ""<cr>
 
 " ----------------------------------------------------------------------------
+" Code navigation and completion
+
+source ~/dotfiles/vim/keymap_coc.vim
+
+" ----------------------------------------------------------------------------
 " Quickfix list
 nnoremap <leader>cz :cprevious<cr>
 nnoremap <leader>cx :cnext<cr>
