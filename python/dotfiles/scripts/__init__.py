@@ -7,21 +7,18 @@ import subprocess
 def find_available_console_scripts():
     commands_path = __path__  # type: ignore  # mypy issue #1422
 
-    modules = (
-        importlib.import_module("dotfiles.scripts.%s" % module_info.name)
-        for module_info in pkgutil.iter_modules(commands_path)
-    )
+    modules = list(pkgutil.iter_modules(commands_path))
 
-    def script_name(module):
-        return module.__name__.split('.')[-1].replace('_', '-')
+    def script_name(module_name):
+        return module_name.replace('_', '-')
 
-    def callable_name(module):
-        return module.__name__ + ":main"
+    def callable_name(module_name):
+        return f'dotfiles.scripts.{module_name}:main'
 
+    # TODO: Find a way to introspect modules without really importing them?
     return [
-        f"{script_name(module)} = {callable_name(module)}"
+        f"{script_name(module.name)} = {callable_name(module.name)}"
         for module in modules
-        if hasattr(module, "main") and callable(getattr(module, "main"))
     ]
 
 
