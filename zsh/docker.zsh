@@ -11,5 +11,5 @@ dockermac() {
     open -j -g -a Docker.app
 }
 
-alias dc='docker-compose'
+alias dc='docker compose'
 alias dps="docker ps --format 'table {{.Names}}\t{{.ID}}\t{{.Status}}\t{{.Image}}'"
