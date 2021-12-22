@@ -23,6 +23,8 @@ endif
 source ~/dotfiles/vim/plugins.vim
 source ~/dotfiles/vim/vim_compat.vim
 
+" Hint: If in doubt about an option, press 'K' above it (in Normal mode) to open the documentation.
+
 set hidden
 set nobackup
 
@@ -35,6 +37,7 @@ set autoindent
 set smartindent
 set shiftwidth=4
 set tabstop=4
+set textwidth=100
 
 " always show a status line, even with only one window
 set laststatus=2
