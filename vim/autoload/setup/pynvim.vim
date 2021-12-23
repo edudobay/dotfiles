@@ -7,7 +7,7 @@ function! s:CheckNvimModule(python)
 endfunction
 
 function! s:CreateVenv(dir, python)
-  exec "!virtualenv --python " . a:python .
+  exec "!virtualenv --clear --python " . a:python .
         \ " " . a:dir
   exec "!" . a:dir . "/bin/python -m pip install pynvim neovim"
   echomsg "Python environment created: " . a:dir
