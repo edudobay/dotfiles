@@ -112,5 +112,7 @@ let g:ackprg = 'ag --nogroup --nocolor --column --hidden'
 Plug 'tpope/vim-fugitive'
 Plug 'airblade/vim-gitgutter'
 
+Plug 'vim-vdebug/vdebug'
+
 " ----------------------------------------------------------------------------
 call plug#end()
