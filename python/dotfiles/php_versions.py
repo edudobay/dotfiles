@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-import os, subprocess, sys, re, pathlib, fnmatch
+import os, subprocess, sys, re, pathlib, fnmatch, textwrap
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from typing import List
 
 cache_dir = pathlib.Path.home() / '.cache/dotfiles'
@@ -114,7 +115,12 @@ def warmup_interpreter_cache():
             f"alias composer{alias}='{interpreter.path} {composer_path}'\n",
         ]
 
-    data = 'PHP_DIRS=()\n' + ''.join(items)
+    expires = datetime.now() + timedelta(hours=24)
+    data = textwrap.dedent(f'''\
+        [[ $(date +%s) -gt {expires:%s} ]] && return
+        PHP_DIRS=()
+    ''') + ''.join(items)
+
     sys.stdout.write(data)
 
     with open(cache_dir / 'php_versions.sh', 'w') as stream:
