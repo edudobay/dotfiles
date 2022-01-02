@@ -8,6 +8,18 @@ _find_composer_root() {
     return 1
 }
 
+source ~/.cache/dotfiles/php_versions.sh || true
+if [[ ${PHP_DIRS+x} = '' ]]; then # empty
+    export COMPOSER_BIN=$(which composer)
+    eval "$(~/dotfiles/python/dotfiles/php_versions.py init)"
+fi
+
+# TODO:
+chphp() {
+    new_path=$(~/dotfiles/python/dotfiles/php_versions.py switch "$1") || return 2
+    PATH=$new_path
+}
+
 _find_composer_root && \
     path+=($COMPOSER_ROOT/vendor/bin)
 
