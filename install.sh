@@ -86,3 +86,5 @@ done
 
 echo "INFO: Installing Python scripts"
 ~/dotfiles/python/deps-install
+
+[[ -f $DOTDIR/antigen.zsh ]] || curl -L git.io/antigen > $DOTDIR/antigen.zsh
