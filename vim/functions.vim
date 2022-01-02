@@ -71,7 +71,7 @@ function! ToggleBgLightDark()
 endfunction
 
 function! TrimTrailingWhitespace()
-  %s/\s\+$//e
+  %s/[ \t\r]\+$//e
 endfunction
 
 function! TmuxSetBuffer(data)
