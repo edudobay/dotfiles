@@ -9,7 +9,7 @@ antigen bundle fzf
 
 antigen bundle zsh-users/zsh-syntax-highlighting
 
-antigen theme edudobay/dotfiles zsh/themes/edudobay
+antigen theme edudobay/dotfiles@main zsh/themes/edudobay
 
 antigen apply
 # ---- </Antigen>
