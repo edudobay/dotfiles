@@ -4,4 +4,14 @@ set -o nounset -o errexit -o pipefail
 
 dir="$(dirname "$0")"
 
+if ! python-novenv -c 'import sys; print(sys.executable); import pip'; then
+	echo 'error: pip does not seem to be installed.'
+	distro=$(lsb_release -si)
+	case "$distro" in
+		Debian|Ubuntu)
+			echo 'info: Debian/Ubuntu detected. Trying to install extra Python packages.'
+			sudo apt install python3-{pip,venv,virtualenv,wheel}
+			;;
+	esac
+fi
 python-novenv -m pip install --user -e "$dir"

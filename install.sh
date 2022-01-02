@@ -50,7 +50,7 @@ dotlink() {
 	source=$DOTDIR/$source
 
 	echo "INFO: Linking $link -> $source"
-    if [[ -L "$link" ]]; then
+	if [[ -L "$link" ]]; then
 		local expected_target target
 		expected_target="$($READLINK -e "$source")"
 		target="$($READLINK -e "$link")"
