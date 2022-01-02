@@ -27,8 +27,12 @@ DOTDIR_ABSOLUTE=~/dotfiles
 DOTDIR=dotfiles
 READLINK=readlink
 
+DISTRO=
 if [[ $OSTYPE = darwin* ]]; then
 	READLINK=greadlink
+    DISTRO=macos
+elif [[ $OSTYPE = linux* ]]; then
+    DISTRO=$(lsb_release -si)
 fi
 
 backup_mv() {
@@ -68,6 +72,24 @@ dotlink() {
 	ln -s "$source" "$link"
 }
 
+stow_check_installed() {
+    type stow &>/dev/null && return
+
+    echo "NOTICE: stow not installed. Trying to install."
+    case "$DISTRO" in
+        Debian|Ubuntu)
+            sudo apt install stow
+            ;;
+        macos)
+            brew install stow
+            ;;
+        *)
+            echo "ERROR: Don't know how to install stow for current system: OSTYPE=$OSTYPE, DISTRO=$DISTRO"
+            exit 2
+            ;;
+    esac
+}
+
 # Initialize dotfiles from Dropbox (could be another source)
 if [[ ! -d ~/dotfiles ]]; then
 	echo "INFO: Creating dotfiles link"
@@ -75,6 +97,7 @@ if [[ ! -d ~/dotfiles ]]; then
 fi
 
 # Stow: helps with complex directory structures
+stow_check_installed
 echo "INFO: Creating stow links"
 stow -v -d ~/dotfiles/stow -t ~ -S ${STOW[@]} || {
 	echo "ERROR: errors encountered while running stow; continuing"
