@@ -102,6 +102,7 @@ let $FZF_DEFAULT_COMMAND = 'rg --files'
 if isdirectory('/usr/local/opt/fzf')  " When fzf installed in a non-standard dir (macOS)
   Plug '/usr/local/opt/fzf'
 endif
+Plug 'junegunn/fzf'
 Plug 'junegunn/fzf.vim'
 
 " > ack / ag
