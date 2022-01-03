@@ -8,7 +8,7 @@ _find_composer_root() {
     return 1
 }
 
-source ~/.cache/dotfiles/php_versions.sh || true
+[[ -f ~/.cache/dotfiles/php_versions.sh ]] && source ~/.cache/dotfiles/php_versions.sh || true
 if [[ ${PHP_DIRS+x} = '' ]]; then # empty
     export COMPOSER_BIN=$(which composer)
     eval "$(~/dotfiles/python/dotfiles/php_versions.py init)"
