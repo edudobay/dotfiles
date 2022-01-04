@@ -16,6 +16,8 @@ alias ag='ag --hidden'
 
 alias ip4='ip -4 addr'
 
+alias zzz='systemctl suspend'
+
 # ls colors
 if [[ $OSTYPE = darwin* ]]; then
   alias ls='ls -G'
