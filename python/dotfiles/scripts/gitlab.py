@@ -86,11 +86,19 @@ class open_url_command:
         browse(url)
 
 
+def query_string(params: dict) -> str:
+    query = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None})
+    if query:
+        return '?' + query
+    return ''
+
+
 class Commands:
     create_new_repo = open_url_command(url='https://gitlab.com/projects/new')
     view_issues = open_url_command('-/issues')
     new_issue = open_url_command('-/issues/new')
-    view_merge_requests = open_url_command('-/merge_requests')
+    view_merge_requests = open_url_command(lambda args: '-/merge_requests' +
+                                           query_string({'state': args.state}))
     view_pipelines = open_url_command('-/pipelines')
     view_any = open_url_command(lambda args: args.page.lstrip('/'))
     view_tree = open_url_command(lambda args: '-/tree/' + resolve_ref(args.ref))
@@ -127,8 +135,7 @@ class Commands:
             'merge_request[target_branch]': args.target_branch,
         }
 
-        query_encoded = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None})
-        return f'merge_requests/new?{query_encoded}'
+        return 'merge_requests/new' + query_string(params)
 
     create_merge_request = open_url_command(_create_merge_request_path)
 
@@ -239,10 +246,18 @@ class CliParserBuilder:
         help='Open the repository branches page',
     )
 
-    subparser_view_merge_requests = make_subparser(
+    @subparser_builder(
         Commands.view_merge_requests, 'prs', 'mrs',
         help='Open the merge requests view',
     )
+    def subparser_view_merge_requests(self, parser):
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument('--closed', help='show only closed merge requests',
+                           dest='state', action='store_const', const='closed')
+        group.add_argument('--merged', help='show only merged merge requests',
+                           dest='state', action='store_const', const='merged')
+        group.add_argument('--open', help='show only open merge requests',
+                           dest='state', action='store_const', const='opened')
 
     subparser_view_pipelines = make_subparser(
         Commands.view_pipelines, 'pipelines',
