@@ -2,7 +2,7 @@
 import os, subprocess, sys, re, pathlib, fnmatch, textwrap
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Optional
 
 cache_dir = pathlib.Path.home() / '.cache/dotfiles'
 cache_file = cache_dir / 'php_versions.sh'
@@ -79,6 +79,15 @@ def find_available_php_interpreters() -> List[PhpInterpreter]:
     return interpreters
 
 
+def find_composer_path() -> Optional[pathlib.Path]:
+    proc = subprocess.run(['which', 'composer'], capture_output=True, text=True)
+    path = proc.stdout.trim()
+    if not path:
+        return None
+
+    return pathlib.Path(path)
+
+
 def switch_main_version(version):
     for interpreter in find_available_php_interpreters():
         if (
@@ -102,7 +111,9 @@ def warmup_interpreter_cache():
     items = []
     found_versions = set()
 
-    composer_path = os.getenv('COMPOSER_BIN', '/usr/local/bin/composer')
+    composer_path = os.getenv('COMPOSER_BIN')
+    if not composer_path:
+        composer_path = find_composer_path()
     
     for interpreter in find_available_php_interpreters():
         version = interpreter.major_minor_version()
@@ -110,10 +121,10 @@ def warmup_interpreter_cache():
         found_versions.add(version)
 
         alias = interpreter.short_alias()
-        items += [
-            f'PHP_DIRS[{alias}]={interpreter.path}\n',
-            f"alias composer{alias}='{interpreter.path} {composer_path}'\n",
-        ]
+        items.append(f'PHP_DIRS[{alias}]={interpreter.path}\n')
+
+        if composer_path:
+            items.append(f"alias composer{alias}='{interpreter.path} {composer_path}'\n")
 
     expires = datetime.now() + timedelta(hours=24)
     data = textwrap.dedent(f'''\
