@@ -77,5 +77,3 @@ thisenv() {
   echo 1>&2 "No environment found to activate here"
   return 1
 }
-
-alias thisvenv=thisenv
