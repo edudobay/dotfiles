@@ -5,7 +5,11 @@ import sys
 import subprocess
 import re
 import urllib.parse
-from functools import wraps
+from dotfiles.git.url import parse_git_url
+from dotfiles.utils.inject import injector
+from dataclasses import dataclass
+from enum import Enum
+from functools import cached_property, wraps
 
 
 def git(args):
@@ -32,16 +36,113 @@ def get_browser():
     return 'open'
 
 
+class Platform(Enum):
+    GitLab = 'gitlab'
+    GitHub = 'github'
+
+
+class PlatformRegistry:
+    command_handlers = {}
+    handler_factories = {}
+
+    @classmethod
+    def register(cls, platform: Platform):
+        def wrap(f):
+            cls.handler_factories[platform] = f
+            return f
+
+        return wrap
+
+    @classmethod
+    def command_handler_for(cls, platform: Platform):
+        if platform in cls.command_handlers:
+            return cls.command_handlers[platform]
+
+        if not platform in cls.handler_factories:
+            raise KeyError(f"Platform not mapped: {platform}")
+
+        cls.command_handlers[platform] = cls.handler_factories[platform]()
+        return cls.command_handlers[platform]
+
+
+@dataclass
+class RemoteRepository:
+    fetch_url: str
+    web_url: str
+    platform: Platform
+
+
+@dataclass
+class Context:
+    args: argparse.Namespace
+    remote: RemoteRepository
+
+    @classmethod
+    def from_args(cls, args):
+        remote_url = get_remote_url(args.remote)
+        remote = resolve_remote_repository(remote_url)
+
+        return cls(args=args, remote=remote)
+
+    @cached_property
+    def injector(self):
+        return injector(dict(
+            context=self,
+            args=self.args,
+            remote=self.remote,
+        ))
+
+    @property
+    def platform(self) -> Platform:
+        return self.remote.platform
+
+    def call(self, callable):
+        return self.injector(callable)
+
+    def resolve_command_handler(self) -> 'open_url_command':
+        args = self.args
+        if callable(args.command) or isinstance(args.command, open_url_command):
+            return args.command
+
+        handler = args.command
+        if isinstance(args.command, str):
+            handler = getattr(Commands, handler)
+
+        if isinstance(handler, Commands):
+            handler = PlatformRegistry.command_handler_for(self.platform)
+            return handler.run(args.command)
+
+
+
 def get_remote_url(remote_name):
     stdout = git(['remote', 'get-url', remote_name])
-    remote_url = stdout.strip()
+    return stdout.strip()
 
-    match = re.match('^git@gitlab.com:(.+?)(\.git)?$', remote_url)
-    if match is None:
-        return None
 
-    repo = match.group(1)
-    return f'https://gitlab.com/{repo}'
+def resolve_remote_repository(remote_url: str) -> RemoteRepository:
+    url = parse_git_url(remote_url)
+
+    # TODO: This is platform-dependent
+    base_url = f'https://{url.hostname}'
+
+    if url.hostname == 'gitlab.com':
+        platform = Platform.GitLab
+    elif url.hostname == 'github.com':
+        platform = Platform.GitHub
+    else:
+        # TODO: Support specifying the platform via command-line or configuration file
+        # For example, map "salsa.debian.org" as a GitLab host
+        raise ValueError(f"Host currently not supported: {url.hostname}")
+
+    # The URL to the repository
+    path = url.path.lstrip('/').rstrip('/').removesuffix('.git')
+    web_url = urllib.parse.urljoin(base_url, path + '/')
+
+    return RemoteRepository(
+        fetch_url=remote_url,
+        web_url=web_url,
+        platform=platform,
+    )
 
 
 def get_current_branch():
@@ -63,25 +164,28 @@ def resolve_ref_as_commit(ref) -> str:
 
 class open_url_command:
     def __init__(self, path=None, *, url=None):
+        def default_url_factory(remote: RemoteRepository, context: Context) -> str:
+            return urllib.parse.urljoin(remote.web_url, context.call(path_factory))
+
         if int(path is None) + int(url is None) != 1:
             raise ValueError('exactly one of path, url must be provided')
 
         if path is not None:
-            path_factory = path if callable(path) else lambda _: path
-            url_factory = lambda args: get_remote_url(args.remote) + '/' + path_factory(args)
+            path_factory = path if callable(path) else lambda: path
+            url_factory = default_url_factory
         else:
-            url_factory = url if callable(url) else lambda _: url
+            url_factory = url if callable(url) else lambda: url
 
         self._url_factory = url_factory
 
-    def get_url(self, args):
-        return self._url_factory(args)
+    def get_url(self, context):
+        return context.call(self._url_factory)
 
-    def print_url(self, args):
-        print(self.get_url(args))
+    def print_url(self, context):
+        print(self.get_url(context))
 
-    def visit_url(self, args):
-        url = self.get_url(args)
+    def visit_url(self, context):
+        url = self.get_url(context)
         print(url)
         browse(url)
 
@@ -93,7 +197,29 @@ def query_string(params: dict) -> str:
     return ''
 
 
-class Commands:
+class Commands(Enum):
+    create_new_repo = object()
+    view_issues = object()
+    new_issue = object()
+    view_merge_requests = object()
+    view_pipelines = object()
+    view_any = object()
+    view_tree = object()
+    view_commit = object()
+    view_branches = object()
+    view_settings = object()
+    create_merge_request = object()
+
+
+class PlatformCommands:
+    def __init__(self): pass
+
+    def run(self, command: Commands):
+        return getattr(self, command.name)
+
+
+@PlatformRegistry.register(Platform.GitLab)
+class GitLabCommands(PlatformCommands):
     create_new_repo = open_url_command(url='https://gitlab.com/projects/new')
     view_issues = open_url_command('-/issues')
     new_issue = open_url_command('-/issues/new')
@@ -141,15 +267,14 @@ class Commands:
 
 
 def main_handler(args):
-    if callable(args.command) or isinstance(args.command, open_url_command):
-        handler = args.command
-    else:
-        handler = getattr(Commands, args.command)
+    context = Context.from_args(args)
+
+    handler = context.resolve_command_handler()
 
     if args.print_only:
-        handler.print_url(args)
+        handler.print_url(context)
     else:
-        handler.visit_url(args)
+        handler.visit_url(context)
 
 
 def make_subparser(command_handler, *aliases, help, extra_defaults=None):
