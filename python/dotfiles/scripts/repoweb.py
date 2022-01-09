@@ -266,6 +266,64 @@ class GitLabCommands(PlatformCommands):
     create_merge_request = open_url_command(_create_merge_request_path)
 
 
+@PlatformRegistry.register(Platform.GitHub)
+class GitHubCommands(PlatformCommands):
+    @staticmethod
+    def _issue_state_query(state) -> str:
+        return {
+            'closed': 'is:closed',
+            'merged': 'is:merged',
+            'open': 'is:open',
+        }[state]
+
+    def _create_settings_path(args):
+        page = re.sub(r'[ -_/]+', '_', args.page.lower())
+
+        pages = {
+            'main': 'settings',
+            'general': 'settings',
+            'options': 'settings',
+            'access': 'settings/access',
+            'security': 'settings/security_analysis',
+            'security_analysis': 'settings/security_analysis',
+            'branches': 'settings/branches',
+            'webhooks': 'settings/hooks',
+            'hooks': 'settings/hooks',
+            'notifications': 'settings/notifications',
+            'integrations': 'settings/installations',
+            'deploy_keys': 'settings/keys',
+            'keys': 'settings/keys',
+            'actions': 'settings/actions',
+            'environments': 'settings/environments',
+            'secrets': 'settings/secrets/actions',
+            'pages': 'settings/pages',
+            'moderation': 'settings/interaction_limits',
+        }
+
+        return pages[page]
+
+    def _create_merge_request_path(args):
+        source_branch = args.source_branch or get_current_branch()
+        target_branch = args.target_branch
+
+        return f'compare/{target_branch}...{source_branch}'
+
+    create_new_repo = open_url_command('/new')
+    view_issues = open_url_command('issues')
+    new_issue = open_url_command('issues/new')
+    view_merge_requests = open_url_command(
+        lambda args: 'pulls' + query_string({'q': GitHubCommands._issue_state_query(args.state)}))
+    view_pipelines = open_url_command('actions')
+    view_any = open_url_command(lambda args: args.page.lstrip('/'))
+    view_tree = open_url_command(lambda args: 'tree/' + resolve_ref(args.ref))
+    view_commit = open_url_command(
+        lambda args: 'commit/' + resolve_ref_as_commit(resolve_ref(args.ref))
+    )
+    view_branches = open_url_command('branches')
+    view_settings = open_url_command(_create_settings_path)
+    create_merge_request = open_url_command(_create_merge_request_path)
+
+
 def main_handler(args):
     context = Context.from_args(args)
 
