@@ -114,6 +114,9 @@ Plug 'tpope/vim-fugitive'
 Plug 'airblade/vim-gitgutter'
 
 Plug 'vim-vdebug/vdebug'
+if exists('g:vdebug_options')
+  let g:vdebug_options.path_maps = {"/var/www/html": getcwd()}
+endif
 
 " ----------------------------------------------------------------------------
 call plug#end()
