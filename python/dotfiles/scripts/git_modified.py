@@ -3,7 +3,7 @@
 import os, sys, re, subprocess, argparse
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import Optional, List, Tuple, Iterable
 from tabulate import tabulate
 from itertools import chain
 from dotfiles.scripts import git_allrepos
@@ -19,22 +19,6 @@ def get_repo_roots() -> List[Path]:
         if line
     ]
 
-header_pattern = re.compile(r"""
-    ^\#\#\ 
-    (?P<branch>.+?)
-    (?:\.\.\.(?P<upstream>.+?))?
-    (?:\ \[(?P<ahead_behind>.+)\])?
-    $
-""", re.X)
-
-ahead_behind_pattern = re.compile(r"""
-    (?: ahead\ (?P<ahead>\d+))
-    |
-    (?: behind\ (?P<behind>\d+))
-    |
-    (?P<gone>gone)
-""", re.X)
-
 @dataclass
 class BranchReport:
     repo: Path
@@ -43,6 +27,7 @@ class BranchReport:
     ahead: Optional[int]
     behind: Optional[int]
     gone: bool
+    dirty: bool
 
     def __lt__(self, other):
         if isinstance(other, BranchReport):
@@ -62,6 +47,62 @@ class BranchReport:
             self.upstream is not None
             and self.upstream.endswith(self.branch)
             and self.branch in ('main', 'master')  # TODO
+        )
+
+class PorcelainV2Parser:
+
+    # 1: changed
+    # 2: renamed or copied
+    # u: unmerged
+    PREFIX_INDICATES_CHANGES = re.compile(r"^(1|2|u) ")
+
+    AHEAD_BEHIND_PATTERN = re.compile(r"^\+(?P<ahead>\d+) -(?P<behind>\d+)$")
+
+    HEADER_HEAD = 'branch.head'
+    HEADER_UPSTREAM = 'branch.upstream'
+    HEADER_AHEAD_BEHIND = 'branch.ab'
+
+    def read_header(self, line: str) -> Optional[Tuple[str, str]]:
+        if line.startswith('# '):
+            try:
+                header, value = line.removeprefix('# ').split(' ', 1)
+                return header, value
+            except ValueError:
+                return None
+
+    def loads(self, data: str, repo: Path) -> Optional[BranchReport]:
+        lines = data.splitlines()
+
+        headers = {}
+        dirty = False
+        for line in lines:
+            if self.PREFIX_INDICATES_CHANGES.match(line) is not None:
+                dirty = True
+
+            header = self.read_header(line)
+            if header is not None:
+                headers[header[0]] = header[1]
+
+        gone = (
+            self.HEADER_UPSTREAM in headers
+            and self.HEADER_AHEAD_BEHIND not in headers
+        )
+
+        ahead = 0
+        behind = 0
+        m = self.AHEAD_BEHIND_PATTERN.match(headers.get(self.HEADER_AHEAD_BEHIND, ''))
+        if m is not None:
+            ahead = int(m.group('ahead'))
+            behind = int(m.group('behind'))
+
+        return BranchReport(
+            repo=repo,
+            branch=headers.get(self.HEADER_HEAD),
+            upstream=headers.get(self.HEADER_UPSTREAM),
+            ahead=ahead,
+            behind=behind,
+            gone=gone,
+            dirty=dirty,
         )
 
 def main():
@@ -96,42 +137,18 @@ def main():
         for root_dir in root_dirs
     )
 
+    parser = PorcelainV2Parser()
     results = []
     for repo_dir in repos:
         repo_dir = Path(repo_dir)
-        cmd = subprocess.run(['git', 'status', '--porcelain', '--branch'], cwd=repo_dir, capture_output=True, text=True)
-        lines = cmd.stdout.splitlines()
+        cmd = subprocess.run(['git', 'status', '--porcelain=v2', '--branch'], cwd=repo_dir, capture_output=True, text=True)
 
-        modified = header_pattern.match(lines[0])
-        if modified is None:
-            print('UNKNOWN', repo_dir, repr(lines[0]))
+        report = parser.loads(cmd.stdout, repo_dir)
+        if report is None:
+            print('UNKNOWN', repo_dir, repr(cmd.stdout))
             continue
-        ahead = 0
-        behind = 0
-        gone = False
-        if m := modified.group('ahead_behind'):
-            groups = m.split(', ')
-            for g in groups:
-                m2 = ahead_behind_pattern.match(g)
-                if m2 is None:
-                    print('NO MATCH:', lines[0], file=sys.stderr)
-                elif a := m2.group('ahead'):
-                    ahead = int(a)
-                elif b := m2.group('behind'):
-                    behind = int(b)
-                elif m2.group('gone') == 'gone':
-                    gone = True
 
-        report = BranchReport(
-            repo = repo_dir,
-            branch = modified.group('branch'),
-            upstream = modified.group('upstream'),
-            ahead = ahead,
-            behind = behind,
-            gone = gone,
-        )
-
-        score = ahead + behind
+        score = report.ahead + report.behind
 
         is_dirty = not (
             report.is_in_sync_with_upstream()
@@ -143,7 +160,7 @@ def main():
             results.append((score, report))
 
     results.sort(reverse=True)
-    def as_table(results):
+    def as_table(results: Iterable[BranchReport]):
         yield "NAME", "BRANCH", "STATUS"
 
         for _, r in results:
@@ -158,6 +175,8 @@ def main():
                 indicators.append(f'↓{r.behind}')
             if r.gone:
                 indicators.append('gone')
+            if r.dirty:
+                indicators.append('*')
 
             yield r.repo.name, branch_msg, ' '.join(indicators)
 
