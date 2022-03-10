@@ -122,11 +122,12 @@ def main():
         """
     )
     parser.add_argument(
-        '-d', '--include-dirty',
+        '-u', '--include-unchanged',
         action='store_true',
         help="""
-            Include dirty repositories: those where the checked out branch is not
-            the main branch and/or is not in sync with its upstream branch.
+            Include unchanged repositories. Default is to show only changed ones —
+            those with uncommitted changes, or where the checked out branch is not
+            the main branch, or where it is out of sync from its upstream branch.
         """
     )
     args = parser.parse_args()
@@ -157,7 +158,7 @@ def main():
 
         score = report.ahead + report.behind
 
-        include_result = args.include_dirty or report.is_changed()
+        include_result = args.include_unchanged or report.is_changed()
 
         if include_result:
             results.append((score, report))
