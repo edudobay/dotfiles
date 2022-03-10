@@ -24,10 +24,10 @@ class BranchReport:
     repo: Path
     branch: str
     upstream: Optional[str]
-    ahead: Optional[int]
-    behind: Optional[int]
+    ahead: int
+    behind: int
     gone: bool
-    dirty: bool
+    uncommitted_changes: bool
 
     def __lt__(self, other):
         if isinstance(other, BranchReport):
@@ -38,8 +38,8 @@ class BranchReport:
         return (
             self.upstream is not None
             and not self.gone
-            and (self.ahead is None or self.ahead == 0)
-            and (self.behind is None or self.behind == 0)
+            and self.ahead == 0
+            and self.behind == 0
         )
 
     def is_default_branch(self) -> bool:
@@ -47,6 +47,13 @@ class BranchReport:
             self.upstream is not None
             and self.upstream.endswith(self.branch)
             and self.branch in ('main', 'master')  # TODO
+        )
+
+    def is_changed(self) -> bool:
+        return (
+            self.uncommitted_changes
+            or not self.is_in_sync_with_upstream()
+            or not self.is_default_branch()
         )
 
 class PorcelainV2Parser:
@@ -74,10 +81,10 @@ class PorcelainV2Parser:
         lines = data.splitlines()
 
         headers = {}
-        dirty = False
+        uncommitted_changes = False
         for line in lines:
             if self.PREFIX_INDICATES_CHANGES.match(line) is not None:
-                dirty = True
+                uncommitted_changes = True
 
             header = self.read_header(line)
             if header is not None:
@@ -102,7 +109,7 @@ class PorcelainV2Parser:
             ahead=ahead,
             behind=behind,
             gone=gone,
-            dirty=dirty,
+            uncommitted_changes=uncommitted_changes,
         )
 
 def main():
@@ -150,11 +157,7 @@ def main():
 
         score = report.ahead + report.behind
 
-        is_dirty = not (
-            report.is_in_sync_with_upstream()
-            and report.is_default_branch()
-        )
-        include_result = args.include_dirty or is_dirty
+        include_result = args.include_dirty or report.is_changed()
 
         if include_result:
             results.append((score, report))
@@ -175,7 +178,7 @@ def main():
                 indicators.append(f'↓{r.behind}')
             if r.gone:
                 indicators.append('gone')
-            if r.dirty:
+            if r.uncommitted_changes:
                 indicators.append('*')
 
             yield r.repo.name, branch_msg, ' '.join(indicators)
