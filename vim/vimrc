@@ -16,6 +16,7 @@ endif
 
 source ~/dotfiles/vim/plugins.vim
 source ~/dotfiles/vim/vim_compat.vim
+source ~/dotfiles/vim/vim_compat_keys.vim
 
 " Hint: If in doubt about an option, press 'K' above it (in Normal mode) to open the documentation.
 
@@ -74,7 +75,6 @@ set foldlevelstart=99
 " Highlight trailing whitespace
 match ErrorMsg '\s\+$'
 
-source ~/dotfiles/vim/keys.vim
 source ~/dotfiles/vim/keymap.vim
 
 source ~/dotfiles/vim/functions.vim

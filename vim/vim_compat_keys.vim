@@ -1,4 +1,4 @@
-if !has("gui_running")
+if !has("nvim") && !has("gui_running")
 
   "set <C-F1>=O1;5P
   "set <C-F2>=O1;5Q
