@@ -179,6 +179,23 @@ nnoremap <C-ScrollWheelUp> :call AddToFontSize(1)<CR>
 nnoremap <C-ScrollWheelDown> :call AddToFontSize(-1)<CR>
 
 " ----------------------------------------------------------------------------
+" Terminal
+
+nmap <A-t> :terminal<cr>
+
+" K => repeat last command (Up + Enter)
+autocmd TermOpen * nnoremap <buffer> K i<up><cr><c-\><c-n>
+" gZ => exit
+autocmd TermOpen * nnoremap <buffer> gZ i<c-d>
+" Auto start insert mode when starting a new terminal
+autocmd TermOpen * startinsert
+
+" Terminal mode
+if has('nvim')
+  tnoremap <Esc> <C-\><C-n>
+endif
+
+" ----------------------------------------------------------------------------
 " Misc
 
 " Execute line as Ex command
@@ -188,7 +205,3 @@ nnoremap <leader>, :exec getline(".")<cr>j
 " unmap Q
 " noremap Q Q
 
-" Terminal mode
-if has('nvim')
-  tnoremap <Esc> <C-\><C-n>
-endif
