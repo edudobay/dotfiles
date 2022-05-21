@@ -129,6 +129,10 @@ def resolve_remote_repository(remote_url: str) -> RemoteRepository:
         platform = Platform.GitLab
     elif url.hostname == 'github.com':
         platform = Platform.GitHub
+    elif url.hostname.find('gitlab') != -1:
+        platform = Platform.GitLab
+    elif url.hostname.find('github') != -1:
+        platform = Platform.GitHub
     else:
         # TODO: Support specifying the platform via command-line or configuration file
         # For example, map "salsa.debian.org" as a GitLab host
