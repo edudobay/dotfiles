@@ -17,6 +17,7 @@ alias ag='ag --hidden'
 alias ip4='ip -4 addr'
 
 alias zzz='systemctl suspend'
+alias rw='repoweb'
 
 # ls colors
 if [[ $OSTYPE = darwin* ]]; then
