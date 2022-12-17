@@ -18,6 +18,7 @@ alias ip4='ip -4 addr'
 
 alias zzz='systemctl suspend'
 alias rw='repoweb'
+alias dibs='sudo chown $USER:'
 
 # ls colors
 if [[ $OSTYPE = darwin* ]]; then
