@@ -213,6 +213,8 @@ class Commands(Enum):
     view_branches = object()
     view_settings = object()
     create_merge_request = object()
+    view_packages = object()
+    view_container_registry = object()
 
 
 class PlatformCommands:
@@ -236,6 +238,9 @@ class GitLabCommands(PlatformCommands):
         lambda args: '-/commit/' + resolve_ref_as_commit(resolve_ref(args.ref))
     )
     view_branches = open_url_command('-/branches')
+
+    view_packages = open_url_command('-/packages')
+    view_container_registry = open_url_command('container_registry')
 
     def _create_settings_path(args):
         page = re.sub(r'[ -_/]+', '_', args.page.lower())
