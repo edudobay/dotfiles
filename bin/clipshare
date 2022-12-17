@@ -1,0 +1,278 @@
+#!/usr/bin/env python3
+
+import argparse
+import textwrap
+from functools import cache, cached_property
+
+import dbus
+
+NS = 'org.kde.kdeconnect'  # namespace
+ClipboardPlugin = 'kdeconnect_clipboard'
+
+def class_name(obj: object) -> str:
+    cls = type(obj)
+
+    if cls.__module__ == '__main__':
+        return cls.__qualname__
+
+    return f'{cls.__module__}.{cls.__qualname__}'
+
+
+class DevicePermissions:
+    table_name = 'clipboard-integration'
+    app_name = 'clipshare'
+    
+    permission_name = 'clipboard-integration'
+
+    def __init__(self, device_id: str, bus: dbus.SessionBus):
+        self.device_id = str(device_id)
+        self._bus = bus
+
+    def __repr__(self) -> str:
+        return f'{class_name(self)}({self.device_id!r})'
+
+    @cached_property
+    def _permission_store(self):
+        return dbus.Interface(
+            self._bus.get_object(
+                'org.freedesktop.impl.portal.PermissionStore',
+                '/org/freedesktop/impl/portal/PermissionStore'
+            ),
+            'org.freedesktop.impl.portal.PermissionStore',
+        )
+
+    @cached_property
+    def device_key(self) -> str:
+        return f'kdeconnect/devices/{self.device_id}'
+
+    def _get_permissions(self) -> set[str]:
+        result = self._permission_store.List(self.table_name)
+        keys = {str(key) for key in result}
+        if not self.device_key in keys:
+            return set()
+
+        result = self._permission_store.GetPermission(
+            self.table_name,
+            self.device_key,
+            self.app_name
+        )
+
+        permissions = {str(p) for p in result}
+        return permissions
+
+    def _set_permissions(self, permissions: set[str]):
+        self._permission_store.SetPermission(
+            self.table_name,
+            True, # create
+            self.device_key,
+            self.app_name,
+            permissions
+        )
+
+    def allow_clipboard_integration(self):
+        permissions = self._get_permissions() | {self.permission_name}
+        self._set_permissions(permissions)
+
+    def disallow_clipboard_integration(self):
+        permissions = self._get_permissions() - {self.permission_name}
+        self._set_permissions(permissions)
+
+    def is_clipboard_integration_allowed(self) -> bool:
+        return self.permission_name in self._get_permissions()
+
+
+class Device:
+    def __init__(self, id: str, name: str, bus: dbus.SessionBus):
+        self.id = str(id)
+        self.name = str(name)
+        self._bus = bus
+        self.permissions = DevicePermissions(id, bus)
+
+    def __repr__(self) -> str:
+        return f'{class_name(self)}({self.id!r}, {self.name!r})'
+
+    @cached_property
+    def _proxy(self):
+        return self._bus.get_object(NS, f'/modules/kdeconnect/devices/{self.id}')
+
+    def allow_clipboard_integration(self):
+        self.permissions.allow_clipboard_integration()
+
+    def disallow_clipboard_integration(self):
+        self.permissions.disallow_clipboard_integration()
+
+    def is_clipboard_integration_allowed(self) -> bool:
+        return self.permissions.is_clipboard_integration_allowed()
+
+    def enable_clipboard_integration(self):
+        if self.is_clipboard_integration_allowed():
+            self._proxy.setPluginEnabled(ClipboardPlugin, True)
+
+    def disable_clipboard_integration(self):
+        self._proxy.setPluginEnabled(ClipboardPlugin, False)
+
+    def is_clipboard_integration_enabled(self) -> bool:
+        return bool(self._proxy.isPluginEnabled(ClipboardPlugin))
+
+
+class Notifier:
+    """
+    https://specifications.freedesktop.org/notification-spec/notification-spec-latest.html
+    """
+
+    NotificationId = 0
+
+    def __init__(self, bus: dbus.SessionBus):
+        self._notifications = dbus.Interface(
+            bus.get_object('org.freedesktop.Notifications', '/org/freedesktop/Notifications'),
+            'org.freedesktop.Notifications'
+        )
+
+    def notify(self, message: str):
+        self._notifications.Notify(
+            'clipshare',
+            self.NotificationId,
+            'edit-copy', # icon
+            'Clipboard integration',
+            message,
+            [], # actions
+            {'urgency': 1}, # 1 = Normal
+            2_500, # milliseconds
+        )
+
+
+class CliNotifier:
+    def notify(self, message: str):
+        print(message)
+
+
+class Devices:
+    def __init__(self, bus: dbus.SessionBus) -> None:
+        self._bus = bus
+        self.kdeconnect = self._bus.get_object(NS, '/modules/kdeconnect')
+
+    def list(self) -> list[Device]:
+        return [
+            Device(id, name, self._bus)
+            for id, name in self.kdeconnect.deviceNames(
+                onlyReachable=False, onlyPaired=True, dbus_interface=f'{NS}.daemon'
+            ).items()
+        ]
+
+    def get_by_id(self, device_id: str):
+        return {
+            d.id: d
+            for d in self.list()
+        }[device_id]
+
+
+class App:
+    def __init__(self, osd: bool):
+        self.bus = dbus.SessionBus()
+        self.notifier = Notifier(self.bus) if osd else CliNotifier()
+        self.devices = Devices(self.bus)
+
+    def list_devices(self):
+        return self.devices.list()
+
+    def allow_clipboard_integration(self, device_id: str):
+        device = self.devices.get_by_id(device_id)
+        device.allow_clipboard_integration()
+        self.notifier.notify(f'Clipboard integration was allowed for device {device.name} ({device.id}).')
+
+    def disallow_clipboard_integration(self, device_id: str):
+        device = self.devices.get_by_id(device_id)
+        device.disallow_clipboard_integration()
+        self.notifier.notify(f'Clipboard integration was disallowed for device {device.name} ({device.id}).')
+
+    def enable_clipboard_integration(self):
+        for device in self.list_devices():
+            device.enable_clipboard_integration()
+        self.notifier.notify('Clipboard integration was enabled.')
+
+    def disable_clipboard_integration(self):
+        for device in self.list_devices():
+            device.disable_clipboard_integration()
+        self.notifier.notify('Clipboard integration was disabled.')
+
+    def toggle_clipboard_integration(self):
+        is_enabled = any(
+            device.is_clipboard_integration_enabled()
+            for device in self.list_devices()
+        )
+
+        if is_enabled:
+            self.disable_clipboard_integration()
+        else:
+            self.enable_clipboard_integration()
+
+
+class Cli:
+    args: argparse.Namespace
+
+    def __init__(self):
+        pass
+
+    def main(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--osd', action='store_true')
+
+        subparsers = parser.add_subparsers()
+
+        parser_on = subparsers.add_parser('on')
+        parser_on.set_defaults(func=self.enable_clipboard_integration)
+
+        parser_off = subparsers.add_parser('off')
+        parser_off.set_defaults(func=self.disable_clipboard_integration)
+
+        parser_toggle = subparsers.add_parser('toggle')
+        parser_toggle.set_defaults(func=self.toggle_clipboard_integration)
+
+        parser_devices = subparsers.add_parser('devices')
+        parser_devices.set_defaults(func=self.list_devices)
+
+        parser_allow = subparsers.add_parser('allow')
+        parser_allow.add_argument('device_id')
+        parser_allow.set_defaults(func=self.allow_clipboard_integration)
+
+        parser_disallow = subparsers.add_parser('disallow')
+        parser_disallow.add_argument('device_id')
+        parser_disallow.set_defaults(func=self.disallow_clipboard_integration)
+
+        args = parser.parse_args()
+
+        self.args = args
+        args.func()
+
+    @cached_property
+    def _app(self) -> App:
+        return App(osd=self.args.osd)
+
+    def list_devices(self):
+        for device in self._app.list_devices():
+            print(textwrap.dedent(f'''\
+                Name: {device.name}
+                Device ID: {device.id}
+                Clipboard integration allowed: {device.is_clipboard_integration_allowed()}
+                Clipboard integration enabled: {device.is_clipboard_integration_enabled()}
+                '''
+            ))
+
+    def enable_clipboard_integration(self):
+        self._app.enable_clipboard_integration()
+
+    def disable_clipboard_integration(self):
+        self._app.disable_clipboard_integration()
+
+    def toggle_clipboard_integration(self):
+        self._app.toggle_clipboard_integration()
+
+    def allow_clipboard_integration(self):
+        self._app.allow_clipboard_integration(self.args.device_id)
+
+    def disallow_clipboard_integration(self):
+        self._app.disallow_clipboard_integration(self.args.device_id)
+
+
+if __name__ == '__main__':
+    Cli().main()
