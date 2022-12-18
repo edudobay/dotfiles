@@ -101,7 +101,7 @@ Plug 'Shougo/denite.nvim'
 call s:sourceLast(s:base_path . '/conf/denite.vim')
 
 " > fzf / Fuzzy finder and picker interfaces
-let $FZF_DEFAULT_COMMAND = 'rg --files'
+let $FZF_DEFAULT_COMMAND = 'rg --files --hidden --iglob "!.git"'
 if isdirectory('/usr/local/opt/fzf')  " When fzf installed in a non-standard dir (macOS)
   Plug '/usr/local/opt/fzf'
 endif
