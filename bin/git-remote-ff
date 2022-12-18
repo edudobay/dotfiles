@@ -1,0 +1,47 @@
+#!/bin/bash
+
+set -o errexit
+
+progname=$0
+
+print_usage() {
+  echo "usage: $progname [-r REMOTE] BRANCH"
+}
+
+print_help() {
+  print_usage
+  cat <<EOF
+update a remote-tracking branch to its remote counterpart, only if a
+fast-forward is possible
+EOF
+}
+
+
+remote=origin
+branch=
+
+while getopts ':hr:' opt; do
+  case $opt in
+    h)
+      print_usage
+      exit ;;
+    r)
+      remote=$OPTARG ;;
+    :)
+      echo "ERROR: option -r requires 'REMOTE' argument"
+      print_usage
+      exit 2 ;;
+  esac
+done
+
+# positional arguments
+shift $((OPTIND-1))
+branch=$1
+
+[[ -z "$branch" ]] && {
+  echo 'ERROR: no branch supplied'
+  print_usage
+  exit 2
+}
+
+git fetch . "$remote/$branch:$branch"
