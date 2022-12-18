@@ -1,12 +1,15 @@
 source ~/dotfiles/vim/gui-functions.vim
 
+set guifont=JetBrains\ Mono:h16
+set linespace=1
+
 " Remove graphic tabs, toolbars, menus, scrollbars from GUI
 set go-=e go-=T go-=m go-=r go-=L
 
-let &guifont = g:guifont
+"let &guifont = g:guifont
 "let g:airline_theme_map['hybrid.*'] = 'base16_railscasts'
 
-call LoadColorTheme(g:guicolor)
+"call LoadColorTheme(g:guicolor)
 
 nmap <C-F5> :call ToggleToolAndMenuBar()<CR>
 

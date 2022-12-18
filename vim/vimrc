@@ -91,9 +91,10 @@ if !has("gui_running")
   set mouse=a
   if exists("$XTERM_SHELL") || exists("$COLORTERM") || stridx($TERM, "-256color") > 0
     "set t_Co=256
-    call LoadColorTheme(g:ctermcolor)
   endif
 endif
+
+call LoadColorTheme(g:ctermcolor)
 
 if has('termguicolors')
   set termguicolors
