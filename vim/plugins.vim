@@ -56,6 +56,9 @@ Plug 'abaldwin88/roamer.vim'
 " > Highlight color names in the same color they represent
 Plug 'chrisbra/color_highlight'
 
+" > PO files (gettext)
+Plug 'vim-scripts/po.vim--gray'
+
 " ----------------------------------------------------------------------------
 " ## Editing features
 
