@@ -130,6 +130,7 @@ source ~/dotfiles/vim/keymap_coc.vim
 nnoremap <leader>cz :cprevious<cr>
 nnoremap <leader>cx :cnext<cr>
 nnoremap <leader>cc :cc<cr>
+nnoremap <leader>c<bs> :cclose<cr>
 nnoremap <leader>C :clist<cr>
 
 " ----------------------------------------------------------------------------
@@ -156,6 +157,9 @@ nnoremap <leader>g!c :Git commit --amend --verbose<cr>
 
 " ----------------------------------------------------------------------------
 " Misc insertions
+
+" Current file name, without extension
+inoremap ;;ff <C-R>=expand("%:t:r")<cr>
 
 " Insert current date/time
 inoremap ;;D- <C-R>=strftime("%Y-%m-%d %H:%M:%S")<cr>
