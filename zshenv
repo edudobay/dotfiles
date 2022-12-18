@@ -1,3 +1,10 @@
+# XDG_RUNTIME_DIR - from https://git.00dani.me/dot/zsh/commit/f43d8a36fab95c61c623c4b2ed385db2aea8a129
+[[ -z $XDG_RUNTIME_DIR ]] && XDG_RUNTIME_DIR=${${TMPDIR-/tmp}%/}/xdg-$UID
+if ! [[ -d $XDG_RUNTIME_DIR ]]; then
+	mkdir -p $XDG_RUNTIME_DIR
+	chmod 0700 $XDG_RUNTIME_DIR
+fi
+
 # Default editor
 export EDITOR=nvim
 export VISUAL=nvim
