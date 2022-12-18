@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+set -o nounset -o errexit -o pipefail
+
+LOG() {
+	printf "[%s] %s\n" "$(date +'%F %T.%4N')" "$1"
+}
+
+RUN() {
+	LOG "+ $*"
+	"$@"
+}
+
+RUN resetmsmice
+
+LOG 'Waiting a few seconds...'
+sleep 0.8
+
+DEVICE_NAME='Microsoft Microsoft® 2.4GHz Transceiver v7.0 Mouse'
+RUN xinput set-prop "$DEVICE_NAME" 'libinput Natural Scrolling Enabled' 1
