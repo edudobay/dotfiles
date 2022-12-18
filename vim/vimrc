@@ -32,7 +32,8 @@ set autoindent
 set smartindent
 set shiftwidth=4
 set tabstop=4
-set textwidth=100
+set textwidth=0
+set shiftround
 
 " always show a status line, even with only one window
 set laststatus=2
