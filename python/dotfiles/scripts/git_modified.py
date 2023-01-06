@@ -112,6 +112,33 @@ class PorcelainV2Parser:
             uncommitted_changes=uncommitted_changes,
         )
 
+@dataclass
+class EscapeFormat:
+    on: str
+    off: str
+
+    def __call__(self, text: str) -> str:
+        if text == '':
+            return text
+        return self.on + text + self.off
+
+    @classmethod
+    def colors(cls, on: str, off: str = '0;39;49') -> 'EscapeFormat':
+        return cls(on=f'\033[{on}m', off=f'\033[{off}m')
+
+
+styles = {
+    'ahead': EscapeFormat.colors('32'),
+    'behind': EscapeFormat.colors('35'),
+    'gone': EscapeFormat.colors('37;44'),
+    'uncommitted': EscapeFormat.colors('36'),
+}
+
+
+def format_indicator(text: str, style: str) -> str:
+    return styles[style](text)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -174,13 +201,13 @@ def main():
 
             indicators = []
             if r.ahead > 0:
-                indicators.append(f'↑{r.ahead}')
+                indicators.append(format_indicator(f'↑{r.ahead}', 'ahead'))
             if r.behind > 0:
-                indicators.append(f'↓{r.behind}')
+                indicators.append(format_indicator(f'↓{r.behind}', 'behind'))
             if r.gone:
-                indicators.append('gone')
+                indicators.append(format_indicator('gone', 'gone'))
             if r.uncommitted_changes:
-                indicators.append('*')
+                indicators.append(format_indicator('*', 'uncommitted'))
 
             yield r.repo.name, branch_msg, ' '.join(indicators)
 
