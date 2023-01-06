@@ -197,7 +197,14 @@ def main():
         for _, r in results:
             branch_msg = r.branch
             if r.upstream:
-                branch_msg = f'{branch_msg}...{r.upstream}'
+                upstream = r.upstream
+                if upstream.endswith('/' + r.branch):
+                    remote_name = r.upstream[:-len(r.branch)-1]
+                    upstream = f' ↙{remote_name}'
+                else:
+                    upstream = '...' + r.upstream
+
+                branch_msg += upstream
 
             indicators = []
             if r.ahead > 0:
