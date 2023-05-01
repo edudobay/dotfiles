@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import configparser
 import sys
 import subprocess
 import re
@@ -10,6 +11,9 @@ from dotfiles.utils.inject import injector
 from dataclasses import dataclass
 from enum import Enum
 from functools import cached_property, wraps
+from pathlib import Path
+
+config = configparser.ConfigParser()
 
 
 def git(args):
@@ -119,6 +123,28 @@ def get_remote_url(remote_name):
     return stdout.strip()
 
 
+def get_repository_platform(url: urllib.parse.SplitResult) -> Platform:
+    """
+    Platform for custom domains can be configured in the 'repoweb.ini' file
+    in your configuration directory (~/.config/).
+
+    Example:
+
+        [CustomDomains]
+        salsa.debian.org = gitlab
+    """
+    hostname = url.hostname
+    if hostname is None:
+        raise ValueError('hostname is None', url)
+
+    section = config['CustomDomains']
+    platform_name = section.get(hostname)
+    if platform_name is None:
+        raise ValueError(f"Host currently not supported: {url.hostname}")
+
+    return Platform(platform_name)
+
+
 def resolve_remote_repository(remote_url: str) -> RemoteRepository:
     url = parse_git_url(remote_url)
 
@@ -134,9 +160,7 @@ def resolve_remote_repository(remote_url: str) -> RemoteRepository:
     elif url.hostname.find('github') != -1:
         platform = Platform.GitHub
     else:
-        # TODO: Support specifying the platform via command-line or configuration file
-        # For example, map "salsa.debian.org" as a GitLab host
-        raise ValueError(f"Host currently not supported: {url.hostname}")
+        platform = get_repository_platform(url)
 
     # The URL to the repository
     path = url.path.lstrip('/').rstrip('/').removesuffix('.git')
@@ -514,6 +538,10 @@ class CliParserBuilder:
         ]
 
 def main():
+    config.read([
+        Path('~/.config/repoweb.ini').expanduser(),
+    ])
+
     parser = CliParserBuilder().build()
     args = parser.parse_args()
 
