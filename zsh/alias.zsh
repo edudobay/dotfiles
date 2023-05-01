@@ -30,8 +30,8 @@ fi
 
 function xrun()
 {
-   nohup "$@" &>/dev/null &
-   disown
+    # '&|' in zsh has the same effect as '&' + 'disown'
+    nohup "$@" &>/dev/null &|
 }
 
 alias cnf='command-not-found'
