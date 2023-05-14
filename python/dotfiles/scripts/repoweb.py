@@ -400,7 +400,7 @@ def subparser_builder(*args, **kwargs):
 
 class CliParserBuilder:
     subparser_new_repo = make_subparser(
-        Commands.create_new_repo, 'repo-new', 'repo',
+        Commands.create_new_repo, 'repo-new',
         help='Open a page to create a new repository',
     )
 
