@@ -1,0 +1,184 @@
+#!/usr/bin/env python3
+
+import argparse, sys, subprocess, re, json, logging
+from dataclasses import dataclass, field, asdict
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("main")
+
+
+@dataclass
+class GitProcess:
+    proc: subprocess.CompletedProcess
+
+    @property
+    def success(self) -> bool:
+        return self.proc.returncode == 0
+
+
+@dataclass
+class GitRepository:
+    path: Path
+
+    def __repr__(self):
+        return f"{type(self).__name__}(path={self.path!r})"
+
+    def git(
+        self,
+        *args,
+        check_status: bool = True,
+        capture_output: bool = True,
+        text: bool = True,
+    ):
+        cmd = ["git", "-C", str(self.path), *args]
+        logger.debug(f"Running command {cmd!r}")
+        proc = subprocess.run(
+            cmd,
+            check=False,
+            capture_output=capture_output,
+            text=text,
+        )
+
+        logger.debug(f"Command exited with status code {proc.returncode}")
+
+        if check_status:
+            if proc.returncode != 0 and capture_output:
+                sys.stdout.write(proc.stdout)
+                sys.stderr.write(proc.stderr)
+            proc.check_returncode()
+
+        return GitProcess(proc)
+
+
+@dataclass
+class GitWorktree:
+    source_repo: GitRepository
+    path: Path
+    branch: str
+    detach: bool = False
+    extra_args: list[str] = field(default_factory=list)
+
+    @property
+    def repository(self) -> GitRepository:
+        return GitRepository(self.path)
+
+    def __enter__(self):
+        pre_args = self.extra_args
+        args = [str(self.path), self.branch]
+        if self.detach:
+            pre_args = pre_args + ["--detach"]
+
+        self.source_repo.git("worktree", "add", *(pre_args + args))
+
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        self.source_repo.git("worktree", "remove", str(self.path))
+
+
+@dataclass
+class MergeTrialResult:
+    success: bool
+    conflict_files: list[str] = field(default_factory=list)
+    up_to_date: bool = False
+
+
+merge_conflict_file_pattern = re.compile(
+    r"^CONFLICT.*: Merge conflict in (?P<filename>.*)$"
+)
+
+
+def parse_merge_output(result: GitProcess) -> MergeTrialResult:
+    if result.success:
+        return MergeTrialResult(success=True)
+
+    conflict_files = []
+    for line in result.proc.stdout.splitlines():
+        if (m := merge_conflict_file_pattern.match(line)) is not None:
+            conflict_files.append(m.group("filename"))
+
+    return MergeTrialResult(success=False, conflict_files=conflict_files)
+
+
+def check_merge(
+    repo: GitRepository,
+    current_branch: str,
+    incoming_branch: str,
+) -> MergeTrialResult:
+    with TemporaryDirectory(prefix="git_worktree_") as tmpdir, GitWorktree(
+        repo, Path(tmpdir), current_branch, detach=True
+    ) as worktree:
+        tmprepo = worktree.repository
+
+        # try to perform a merge
+        merge_result = tmprepo.git(
+            "merge",
+            "--no-ff",
+            "--no-commit",
+            incoming_branch,
+            check_status=False,
+            capture_output=True,
+        )
+
+        if (
+            merge_result.success
+            and merge_result.proc.stdout.strip() == "Already up to date."
+        ):
+            return MergeTrialResult(success=True, up_to_date=True)
+
+        # cleanup only if some merge would be performed
+        tmprepo.git("merge", "--abort")
+
+        return parse_merge_output(merge_result)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="""
+            Check if a Git branch (source) can be merged into another (target) without conflicts.
+        """,
+    )
+
+    parser.add_argument(
+        "--repository",
+        "-C",
+        dest="repo",
+        type=Path,
+        default=".",
+        help="repository to operate on (default is current dir)",
+    )
+    parser.add_argument("source_branch")
+    parser.add_argument("target_branch")
+
+    parser.add_argument(
+        "--output",
+        "-o",
+        dest="output_mode",
+        default="text",
+        choices=("json", "text"),
+        help='select output mode. Options: "json", "text" (show conflicted files, one per line). Default: %(default)s',
+    )
+    parser.add_argument("-v", "--verbose", action="store_true")
+
+    args = parser.parse_args()
+
+    if args.verbose:
+        logger.setLevel(logging.DEBUG)
+
+    result = check_merge(
+        GitRepository(args.repo), args.source_branch, args.target_branch
+    )
+
+    if args.output_mode == "json":
+        print(json.dumps(asdict(result)))
+    else:
+        print(*result.conflict_files, sep="\n")
+
+    return 0 if result.success else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
