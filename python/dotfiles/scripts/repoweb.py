@@ -294,7 +294,7 @@ class GitLabCommands(PlatformCommands):
             'merge_request[target_branch]': args.target_branch,
         }
 
-        return 'merge_requests/new' + query_string(params)
+        return '-/merge_requests/new' + query_string(params)
 
     create_merge_request = open_url_command(_create_merge_request_path)
 
