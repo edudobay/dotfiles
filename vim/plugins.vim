@@ -74,7 +74,7 @@ let g:camelcasemotion_key = ','
 Plug 'tpope/vim-surround'
 
 " > Multiple cursors
-Plug 'terryma/vim-multiple-cursors'
+Plug 'mg979/vim-visual-multi', {'branch': 'master'}         " multiple cursors, sublime like but more powerful
 
 " > Auto-close pairs (quotes, brackets, etc)
 Plug 'jiangmiao/auto-pairs'
