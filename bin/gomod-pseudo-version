@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Print a pseudo-version for the given Git ref (default to HEAD, the currently checked out commit), suitable for using as a Go module version.
+# https://go.dev/ref/mod#pseudo-versions
+
+set -o nounset -o errexit -o pipefail
+
+REF=${1-HEAD}
+
+echo v0.0.0-$(date --date=@$(git log -n1 --pretty=format:%at "$REF") -u +%Y%m%d%H%M%S)-$(git rev-parse --short=12 "$REF")
