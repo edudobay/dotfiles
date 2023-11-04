@@ -72,5 +72,5 @@ docker() {
     command docker "$@"
 }
 
-alias dc='docker compose'
+alias dc='docker-compose-helper'
 alias dps="docker ps --format 'table {{.Names}}\t{{.ID}}\t{{.Status}}\t{{.Image}}'"

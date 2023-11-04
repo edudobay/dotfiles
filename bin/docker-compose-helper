@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -o nounset -o errexit -o pipefail
+
+RCFILE=.dockercomposerc
+
+args=()
+
+if [[ -f "$RCFILE" && ${DC_NORC-} != 1 ]]; then
+    args+=($(cat "$RCFILE"))
+fi
+
+set -x
+
+exec docker compose "${args[@]}" "$@"
