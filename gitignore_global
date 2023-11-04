@@ -6,6 +6,8 @@ Icon[]
 *~
 *.swp
 
+.tool-versions
+
 .dropbox
 
 *.sublime-project
