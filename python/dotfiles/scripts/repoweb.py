@@ -137,8 +137,7 @@ def get_repository_platform(url: urllib.parse.SplitResult) -> Platform:
     if hostname is None:
         raise ValueError('hostname is None', url)
 
-    section = config['CustomDomains']
-    platform_name = section.get(hostname)
+    platform_name = config.get('CustomDomains', hostname, fallback=None)
     if platform_name is None:
         raise ValueError(f"Host currently not supported: {url.hostname}")
 
