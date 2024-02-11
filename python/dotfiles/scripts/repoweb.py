@@ -5,6 +5,7 @@ import configparser
 import sys
 import subprocess
 import re
+from typing import Optional
 import urllib.parse
 from dotfiles.git.url import parse_git_url
 from dotfiles.utils.inject import injector
@@ -43,6 +44,7 @@ def get_browser():
 class Platform(Enum):
     GitLab = 'gitlab'
     GitHub = 'github'
+    Bitbucket = 'bitbucket'
 
 
 class PlatformRegistry:
@@ -150,6 +152,8 @@ def guess_platform(url: urllib.parse.ParseResult) -> Platform:
             return Platform.GitLab
         case 'github.com':
             return Platform.GitHub
+        case 'bitbucket.org':
+            return Platform.Bitbucket
 
         case str() if url.hostname.find('gitlab') != -1:
             return Platform.GitLab
@@ -248,6 +252,13 @@ class Commands(Enum):
     view_container_registry = object()
 
 
+class MergeRequestState(Enum):
+    Open = 'open'
+    Closed = 'closed'
+    Merged = 'merged'
+    All = 'all'
+
+
 class PlatformCommands:
     def __init__(self): pass
 
@@ -255,13 +266,47 @@ class PlatformCommands:
         return getattr(self, command.name)
 
 
+@PlatformRegistry.register(Platform.Bitbucket)
+class BitbucketCommands(PlatformCommands):
+    @classmethod
+    def pull_request_state(cls, state: Optional[str]) -> Optional[str]:
+        return {
+            'opened': 'OPEN',
+            'closed': 'DECLINED',
+            'merged': 'MERGED',
+            'all': 'ALL',
+        }.get(state)
+
+    view_any = open_url_command(lambda args: args.page.lstrip('/'))
+
+    view_merge_requests = open_url_command(lambda args: 'pull-requests/' + query_string({
+        'state': BitbucketCommands.pull_request_state(args.state),
+    }))
+
+    create_merge_request = open_url_command(lambda args: 'pull-requests/new' + query_string({
+        # TODO Handle args. Below, example from GitLab:
+        # 'merge_request[source_branch]': args.source_branch or get_current_branch(),
+        # 'merge_request[target_branch]': args.target_branch,
+    }))
+
+
 @PlatformRegistry.register(Platform.GitLab)
 class GitLabCommands(PlatformCommands):
+    @staticmethod
+    def _merge_request_state(state: Optional[MergeRequestState]) -> Optional[str]:
+        return {
+            MergeRequestState.Open: 'opened',
+            MergeRequestState.Closed: 'closed',
+            MergeRequestState.Merged: 'merged',
+            MergeRequestState.All: 'all',
+        }.get(state)
+
     create_new_repo = open_url_command(url='https://gitlab.com/projects/new')
     view_issues = open_url_command('-/issues')
     new_issue = open_url_command('-/issues/new')
-    view_merge_requests = open_url_command(lambda args: '-/merge_requests' +
-                                           query_string({'state': args.state}))
+    view_merge_requests = open_url_command(lambda args: '-/merge_requests' + query_string({
+        'state': GitLabCommands._merge_request_state(args.state),
+    }))
     view_pipelines = open_url_command('-/pipelines')
     view_any = open_url_command(lambda args: args.page.lstrip('/'))
     view_tree = open_url_command(lambda args: '-/tree/' + resolve_ref(args.ref))
@@ -309,11 +354,11 @@ class GitLabCommands(PlatformCommands):
 @PlatformRegistry.register(Platform.GitHub)
 class GitHubCommands(PlatformCommands):
     @staticmethod
-    def _issue_state_query(state) -> str:
+    def _issue_state_query(state: MergeRequestState) -> str:
         return {
-            'closed': 'is:closed',
-            'merged': 'is:merged',
-            'open': 'is:open',
+            MergeRequestState.Closed: 'is:closed',
+            MergeRequestState.Merged: 'is:merged',
+            MergeRequestState.Open: 'is:open',
         }[state]
 
     def _create_settings_path(args):
@@ -476,11 +521,13 @@ class CliParserBuilder:
     def subparser_view_merge_requests(self, parser):
         group = parser.add_mutually_exclusive_group()
         group.add_argument('--closed', help='show only closed merge requests',
-                           dest='state', action='store_const', const='closed')
+                           dest='state', action='store_const', const=MergeRequestState.Closed)
         group.add_argument('--merged', help='show only merged merge requests',
-                           dest='state', action='store_const', const='merged')
+                           dest='state', action='store_const', const=MergeRequestState.Merged)
         group.add_argument('--open', help='show only open merge requests',
-                           dest='state', action='store_const', const='opened')
+                           dest='state', action='store_const', const=MergeRequestState.Open)
+        group.add_argument('--all', help='show all merge requests',
+                           dest='state', action='store_const', const=MergeRequestState.All)
 
     subparser_view_pipelines = make_subparser(
         Commands.view_pipelines, 'pipelines',
