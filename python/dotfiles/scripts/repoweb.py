@@ -144,22 +144,30 @@ def get_repository_platform(url: urllib.parse.SplitResult) -> Platform:
     return Platform(platform_name)
 
 
+def guess_platform(url: urllib.parse.ParseResult) -> Platform:
+    match url.hostname:
+        case 'gitlab.com':
+            return Platform.GitLab
+        case 'github.com':
+            return Platform.GitHub
+
+        case str() if url.hostname.find('gitlab') != -1:
+            return Platform.GitLab
+        case str() if url.hostname.find('github') != -1:
+            return Platform.GitHub
+
+        case _:
+            return get_repository_platform(url)
+
+
 def resolve_remote_repository(remote_url: str) -> RemoteRepository:
     url = parse_git_url(remote_url)
 
     # TODO: This is platform-dependent
     base_url = f'https://{url.hostname}'
 
-    if url.hostname == 'gitlab.com':
-        platform = Platform.GitLab
-    elif url.hostname == 'github.com':
-        platform = Platform.GitHub
-    elif url.hostname.find('gitlab') != -1:
-        platform = Platform.GitLab
-    elif url.hostname.find('github') != -1:
-        platform = Platform.GitHub
-    else:
-        platform = get_repository_platform(url)
+    platform = guess_platform(url)
+
 
     # The URL to the repository
     path = url.path.lstrip('/').rstrip('/').removesuffix('.git')
