@@ -284,9 +284,8 @@ class BitbucketCommands(PlatformCommands):
     }))
 
     create_merge_request = open_url_command(lambda args: 'pull-requests/new' + query_string({
-        # TODO Handle args. Below, example from GitLab:
-        # 'merge_request[source_branch]': args.source_branch or get_current_branch(),
-        # 'merge_request[target_branch]': args.target_branch,
+        'source': args.source_branch or get_current_branch(),
+        'dest': args.target_branch,
     }))
 
 
