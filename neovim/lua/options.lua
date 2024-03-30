@@ -57,6 +57,8 @@ vim.opt.inccommand = 'split'
 vim.opt.cursorline = true
 
 -- Minimal number of screen lines to keep above and below the cursor.
-vim.opt.scrolloff = 10
+vim.opt.scrolloff = 3
+
+vim.g.python3_host_prog = os.getenv 'HOME' .. '/.local/share/nvim/venv-py3/bin/python'
 
 -- vim: ts=2 sts=2 sw=2 et

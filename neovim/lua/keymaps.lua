@@ -48,4 +48,12 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   end,
 })
 
+vim.keymap.set('n', '<leader>9', ':tabp<cr>', { desc = 'Previous tab' })
+vim.keymap.set('n', '<leader>0', ':tabn<cr>', { desc = 'Next tab' })
+
+vim.keymap.set('n', '<leader>q', ':bd<cr>', { desc = 'Delete current buffer' })
+vim.keymap.set('n', '<leader>o.', function()
+  require('oil').open(nil)
+end, { desc = 'File browser' })
+
 -- vim: ts=2 sts=2 sw=2 et
