@@ -15,7 +15,31 @@ require('lazy').setup({
 
   'editorconfig/editorconfig-vim',
 
-  'mileszs/ack.vim', -- ack/ag (silver searcher)
+  -- Git
+  'tpope/vim-fugitive',
+
+  --[[ Plugins to evaluate ]]
+
+  -- Highlight color names in the same color they represent
+  'chrisbra/color_highlight',
+
+  -- Isn't working :(
+  -- ack/ag (silver searcher)
+  {
+    'mileszs/ack.vim',
+    init = function()
+      vim.g.ackprg = 'ag --nogroup --nocolor --column --hidden'
+    end,
+  },
+
+  {
+    'vim-vdebug/vdebug',
+    init = function()
+      local options = vim.g.vdebug_options or {}
+      options.path_maps = { ['/var/www/html'] = vim.fn.getcwd() }
+      vim.g.vdebug_options = options
+    end,
+  },
 
   -- Use `opts = {}` to force a plugin to be loaded.
   { 'stevearc/oil.nvim', opts = {}, dependencies = { 'nvim-tree/nvim-web-devicons' } },

@@ -56,4 +56,9 @@ vim.keymap.set('n', '<leader>o.', function()
   require('oil').open(nil)
 end, { desc = 'File browser' })
 
+-- Git (Fugitive) commands
+vim.keymap.set('n', '<leader>gs', ':Git<cr>', { desc = 'Git: status' })
+vim.keymap.set('n', '<leader>gc', ':Git commit --verbose<cr>', { desc = 'Git: commit' })
+vim.keymap.set('n', '<leader>g!c', ':Git commit --amend --verbose<cr>', { desc = 'Git: commit (amend)' })
+
 -- vim: ts=2 sts=2 sw=2 et
