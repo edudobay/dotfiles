@@ -20,7 +20,7 @@ DOTLINKS=(
 )
 
 STOW=(
-	nvim
+	nvim-lua
 )
 
 DOTDIR_ABSOLUTE=~/dotfiles
