@@ -8,6 +8,8 @@ Icon[]
 
 .tool-versions
 
+.dockercomposerc
+
 .dropbox
 
 *.sublime-project
