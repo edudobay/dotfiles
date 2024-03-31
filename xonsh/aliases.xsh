@@ -17,5 +17,7 @@ aliases['ag'] = 'ag --hidden'
 
 aliases['ip4'] = 'ip -4 addr'
 
+aliases['vim'] = 'nvim'
+
 # TODO
 aliases['tb'] = '$XONSH_SHOW_TRACEBACK = not $XONSH_SHOW_TRACEBACK'
