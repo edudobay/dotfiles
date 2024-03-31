@@ -32,8 +32,14 @@ require('lazy').setup({
     end,
   },
 
-  -- Use `opts = {}` to force a plugin to be loaded.
-  { 'stevearc/oil.nvim', opts = {}, dependencies = { 'nvim-tree/nvim-web-devicons' } },
+  {
+    'stevearc/oil.nvim',
+    opts = {
+      columns = { 'icon' },
+      skip_confirm_for_simple_edits = true,
+    },
+    dependencies = { 'nvim-tree/nvim-web-devicons' },
+  },
 
   -- NOTE: Plugins can also be added by using a table,
   -- with the first argument being the link and the following

@@ -9,7 +9,7 @@ vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, { desc = 'Go to previous [D]iagnostic message' })
 vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Go to next [D]iagnostic message' })
 vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, { desc = 'Show diagnostic [E]rror messages' })
-vim.keymap.set('n', '<leader>zq', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
+vim.keymap.set('n', '<leader>dq', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
 
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
@@ -51,10 +51,26 @@ vim.api.nvim_create_autocmd('TextYankPost', {
 vim.keymap.set('n', '<leader>9', ':tabp<cr>', { desc = 'Previous tab' })
 vim.keymap.set('n', '<leader>0', ':tabn<cr>', { desc = 'Next tab' })
 
+vim.keymap.set('n', '<leader>z', ':bp<cr>', { desc = 'Previous buffer' })
+vim.keymap.set('n', '<leader>x', ':bn<cr>', { desc = 'Next buffer' })
+
+vim.keymap.set('n', '<leader>cz', ':cprevious<cr>', { desc = 'Quickfix: previous item' })
+vim.keymap.set('n', '<leader>cx', ':cnext<cr>', { desc = 'Quickfix: next item' })
+vim.keymap.set('n', '<leader>cc', ':cc<cr>', { desc = 'Quickfix: open' })
+
 vim.keymap.set('n', '<leader>q', ':bd<cr>', { desc = 'Delete current buffer' })
+
+vim.keymap.set('n', '<leader>/w', ':Ack <c-r><c-w><cr>', { desc = 'Search word under cursor' })
+vim.keymap.set('n', '<leader>/W', ':Ack -w <c-r><c-w><cr>', { desc = 'Search whole word under cursor' })
+
+vim.keymap.set('n', '<leader>,', ':exec getline(".")<cr>j', { desc = 'Execute line as Ex command' })
+
 vim.keymap.set('n', '<leader>o.', function()
-  require('oil').open(nil)
+  require('oil').open_float(nil)
 end, { desc = 'File browser' })
+vim.keymap.set('n', '<leader>o>', function()
+  require('oil').open(nil)
+end, { desc = 'File browser (full window)' })
 
 -- Git (Fugitive) commands
 vim.keymap.set('n', '<leader>gs', ':Git<cr>', { desc = 'Git: status' })
