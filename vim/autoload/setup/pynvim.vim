@@ -7,9 +7,8 @@ function! s:CheckNvimModule(python)
 endfunction
 
 function! s:CreateVenv(dir, python)
-  exec "!virtualenv --clear --python " . a:python .
-        \ " " . a:dir
-  exec "!" . a:dir . "/bin/python -m pip install pynvim neovim"
+  exec "!" . a:python . " -m venv " . a:dir
+  exec "!" . a:dir . "/bin/python3 -m pip install pynvim neovim"
   echomsg "Python environment created: " . a:dir
 endfunction
 
@@ -29,7 +28,4 @@ endfunction
 
 function! setup#pynvim#venvs()
   call s:SetupVenv(g:python3_host_prog, "python3")
-  if exists('g:require_python2') && g:require_python2
-    call s:SetupVenv(g:python_host_prog, "python2")
-  endif
 endfunction
