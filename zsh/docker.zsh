@@ -11,7 +11,7 @@ dockermac() {
     open -j -g -a Docker.app
 }
 
-DOCKER_PS_FORMAT="table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Image}}\t{{.Command}}"
+DOCKER_PS_FORMAT="table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Image}}\t{{.Command}}\t{{.Ports}}"
 
 _docker_ps() {
     local has_format=0
@@ -20,7 +20,7 @@ _docker_ps() {
     local curr_arg
     for arg; do
         if [[ "$curr_arg" == --format ]]; then
-            if [[ "$arg" != standard ]]; then
+            if [[ "$arg" != standard && "$arg" != default ]]; then
                 args_format+=("$arg")
                 args+=("${args_format[@]}")
             fi
