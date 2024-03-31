@@ -32,15 +32,6 @@ require('lazy').setup({
     end,
   },
 
-  {
-    'vim-vdebug/vdebug',
-    init = function()
-      local options = vim.g.vdebug_options or {}
-      options.path_maps = { ['/var/www/html'] = vim.fn.getcwd() }
-      vim.g.vdebug_options = options
-    end,
-  },
-
   -- Use `opts = {}` to force a plugin to be loaded.
   { 'stevearc/oil.nvim', opts = {}, dependencies = { 'nvim-tree/nvim-web-devicons' } },
 
@@ -78,6 +69,8 @@ require('lazy').setup({
   require 'kickstart/plugins/mini',
 
   require 'kickstart/plugins/treesitter',
+
+  require 'kickstart/plugins/debug',
 
   -- The following two comments only work if you have downloaded the kickstart repo, not just copy pasted the
   -- init.lua. If you want these files, they are in the repository, so you can just download them and

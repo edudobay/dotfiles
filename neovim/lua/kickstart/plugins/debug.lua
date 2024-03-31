@@ -22,11 +22,13 @@ return {
     'jay-babu/mason-nvim-dap.nvim',
 
     -- Add your own debuggers here
-    'leoluz/nvim-dap-go',
+    -- 'leoluz/nvim-dap-go',
   },
   config = function()
     local dap = require 'dap'
     local dapui = require 'dapui'
+
+    local defs = require 'defs'
 
     require('mason-nvim-dap').setup {
       -- Makes a best effort to setup the various debuggers with
@@ -45,6 +47,24 @@ return {
       },
     }
 
+    dap.adapters.php = {
+      type = 'executable',
+      command = 'node',
+      args = { defs.deps_dir .. '/dap-adapter-php' },
+    }
+
+    -- https://github.com/xdebug/vscode-php-debug#supported-launchjson-settings
+    dap.configurations.php = {
+      {
+        type = 'php',
+        request = 'launch',
+        name = 'Listen for Xdebug (9000)',
+        hostname = '0.0.0.0',
+        port = 9000,
+        pathMappings = {},
+      },
+    }
+
     -- Basic debugging keymaps, feel free to change to your liking!
     vim.keymap.set('n', '<F5>', dap.continue, { desc = 'Debug: Start/Continue' })
     vim.keymap.set('n', '<F1>', dap.step_into, { desc = 'Debug: Step Into' })
@@ -54,6 +74,38 @@ return {
     vim.keymap.set('n', '<leader>B', function()
       dap.set_breakpoint(vim.fn.input 'Breakpoint condition: ')
     end, { desc = 'Debug: Set Breakpoint' })
+
+    vim.api.nvim_create_user_command('PhpMapPath', function(opts)
+      local nargs = #opts.fargs
+      if nargs == 0 then
+        if opts.bang then -- Clear
+          dap.configurations.php[1].pathMappings = {}
+        end
+
+        -- Show current configuration
+        vim.print(dap.configurations.php[1].pathMappings)
+        return
+      elseif nargs < 2 then
+        error 'insufficient arguments, 2 arguments required'
+        return
+      elseif nargs > 2 then
+        error 'too many arguments, 2 arguments required'
+        return
+      end
+
+      local remote_path = opts.fargs[1]
+      local local_path = opts.fargs[2]
+
+      -- TODO: Handle current dir in local_path
+
+      if opts.bang then -- Replace
+        dap.configurations.php[1].pathMappings = { [remote_path] = local_path }
+      else -- Add
+        dap.configurations.php[1].pathMappings[remote_path] = local_path
+      end
+
+      vim.print(dap.configurations.php[1].pathMappings)
+    end, { nargs = '*', bang = true })
 
     -- Dap UI setup
     -- For more information, see |:help nvim-dap-ui|
@@ -85,6 +137,6 @@ return {
     dap.listeners.before.event_exited['dapui_config'] = dapui.close
 
     -- Install golang specific config
-    require('dap-go').setup()
+    -- require('dap-go').setup()
   end,
 }
