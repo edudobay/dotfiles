@@ -162,6 +162,14 @@ return {
             },
           },
         },
+
+        intelephense = {
+          settings = {
+            intelephense = {
+              format = { enable = false },
+            },
+          },
+        },
       }
 
       -- Ensure the servers and tools above are installed
@@ -188,6 +196,16 @@ return {
             -- by the server configuration above. Useful when disabling
             -- certain features of an LSP (for example, turning off formatting for tsserver)
             server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
+
+            -- Somehow the default 'settings' don't seem to be passed to the plugin.
+            -- My manual implementation:
+            local configs = require 'lspconfig.configs'
+            if not configs[server_name] then
+              configs[server_name] = { default_config = server['settings'] or {} }
+            else
+              configs[server_name]['default_config'] = server['settings'] or {}
+            end
+
             require('lspconfig')[server_name].setup(server)
           end,
         },
