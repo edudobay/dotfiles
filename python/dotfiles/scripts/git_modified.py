@@ -183,7 +183,7 @@ def main():
             print('UNKNOWN', repo_dir, repr(cmd.stdout))
             continue
 
-        score = report.ahead + report.behind
+        score = 100 * (report.ahead + report.behind) + (1 if report.uncommitted_changes else 0)
 
         include_result = args.include_unchanged or report.is_changed()
 
