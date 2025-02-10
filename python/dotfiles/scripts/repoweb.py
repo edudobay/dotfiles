@@ -279,6 +279,10 @@ class BitbucketCommands(PlatformCommands):
 
     view_any = open_url_command(lambda args: args.page.lstrip('/'))
 
+    view_commit = open_url_command(
+        lambda args: 'commits/' + resolve_ref_as_commit(resolve_ref(args.ref))
+    )
+
     view_merge_requests = open_url_command(lambda args: 'pull-requests/' + query_string({
         'state': BitbucketCommands.pull_request_state(args.state),
     }))
