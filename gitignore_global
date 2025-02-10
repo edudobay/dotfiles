@@ -7,6 +7,9 @@ Icon[]
 *.swp
 
 .tool-versions
+.mise.local.toml
+mise.local.toml
+mise.toml.local
 
 .dockercomposerc
 
