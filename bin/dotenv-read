@@ -5,7 +5,7 @@ import re
 import sys
 import argparse
 from functools import partial
-from typing import *
+from typing import Tuple, Callable, Optional, Iterable, Iterator, TypeVar
 
 I = TypeVar('I')
 T = TypeVar('T')
@@ -15,8 +15,17 @@ KeyValue = Tuple[str, str]
 Getter = Callable[[I], Optional[T]]
 Transformer = Callable[[T], U]
 
+def unwrap_quoted_value(value: str) -> str:
+    if value.startswith('"') and value.endswith('"'):
+        return value[1:-1]
+    if value.startswith("'") and value.endswith("'"):
+        return value[1:-1]
+    return value
+
 def split_key_value(text: str) -> KeyValue:
-    return tuple(text.split('=', 1))
+    key, value = text.split('=', 1)
+    value = unwrap_quoted_value(value)
+    return key, value
 
 def shell_quote(text: str) -> str:
     return text.replace("'", "'\\''")
@@ -34,10 +43,10 @@ def key_value_to_export(key_value: KeyValue) -> str:
     key, value = key_value
     return "export %s='%s'" % (key, shell_quote(value))
 
-def not_none(seq: Iterable[Optional[T]]) -> Iterator[T]:
+def not_none(seq: Iterable[Optional[T]]) -> Iterable[T]:
     return (item for item in seq if item is not None)
 
-def get_items(getter: Getter, seq: Iterator[I]) -> Iterator[T]:
+def get_items(getter: Getter, seq: Iterable[I]) -> Iterable[T]:
     return not_none(map(getter, seq))
 
 def strip(line: str) -> str:
