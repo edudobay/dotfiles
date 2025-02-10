@@ -1,0 +1,28 @@
+[project]
+name = "edudobay_dotfiles"
+version = "0.dev20250210"
+authors = [
+    { name = "Eduardo Dobay", email = "edudobay@gmail.com" },
+]
+requires-python = ">=3.10"
+dependencies = [
+    "argcomplete",
+    "pipx",
+    "tabulate",
+]
+
+[project.urls]
+"Source code" = "https://github.com/edudobay/dotfiles"
+
+[project.scripts]
+git-allrepos = "dotfiles.scripts.git_allrepos:main"
+git-modified = "dotfiles.scripts.git_modified:main"
+gitlab = "dotfiles.scripts.repoweb:main"
+repoweb = "dotfiles.scripts.repoweb:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+dev-mode-dirs = ["."]

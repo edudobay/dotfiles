@@ -14,4 +14,4 @@ if ! python-novenv -c 'import sys; print(sys.executable); import pip'; then
 			;;
 	esac
 fi
-python-novenv -m pip install --user -e "$dir"
+python-novenv -m pip install --user --break-system-packages -e "$dir"
