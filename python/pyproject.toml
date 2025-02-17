@@ -7,9 +7,13 @@ authors = [
 requires-python = ">=3.10"
 dependencies = [
     "argcomplete",
-    "pipx",
+    "click>=8.1.8",
     "tabulate",
+    "xdg-base-dirs>=6.0.2",
 ]
+
+[project.optional-dependencies]
+dev = ["pytest"]
 
 [project.urls]
 "Source code" = "https://github.com/edudobay/dotfiles"
