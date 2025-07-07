@@ -16,7 +16,6 @@ DOTLINKS=(
 	tmux.conf.user
 	zshenv
 	zshrc
-	zshrc.local
 )
 
 STOW=(
