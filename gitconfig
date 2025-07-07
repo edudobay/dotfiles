@@ -1,0 +1,106 @@
+[core]
+	editor = nvim
+	autocrlf = input
+	excludesfile = ~/dotfiles/gitignore_global
+[user]
+	name = Eduardo Dobay
+	email = edudobay@gmail.com
+[color]
+	ui = true
+[alias]
+	hist = log --pretty=oneline-color --graph --date=short
+	ha = log --pretty=oneline-color --graph --date=short --all
+	hal = log --pretty=oneline-color --graph --date=short --branches
+	har = log --pretty=oneline-color --graph --date=short --remotes
+	hh = log --pretty=oneline-reldate-color --graph --date=relative -n20
+	hha = log --pretty=oneline-reldate-color --graph --date=relative -n20 --all
+	hhal = log --pretty=oneline-reldate-color --graph --date=relative -n20 --branches
+	hhar = log --pretty=oneline-reldate-color --graph --date=relative -n20 --remotes
+	last = log -n1 -p --stat
+	lg = log --graph
+	lgs = log --oneline --graph
+	df = diff
+	dfs = diff --staged
+	dff = diff --stat
+	dffs = diff --stat --staged
+	st = status
+	s = status -sb
+	br = branch
+	bp = branch-protection
+	co = checkout
+	sub = submodule update --init --recursive
+        rff = remote-ff
+[pretty]
+	medium-color = tformat:%C(yellow)commit %H%Creset%C(auto)%d%Creset%nAuthor: %an <%ae>%nDate:   %ad%n%n    %w(76,0,4)%B
+	oneline-color = format:%C(auto)%h%Creset  %ad  %s%C(auto)%d%Creset [%an]
+	oneline-reldate-color = format:%C(auto)%h%Creset  %<(14)%ad  %s%C(auto)%d%Creset [%an]
+[format]
+	pretty = medium-color
+[push]
+	default = simple
+[merge]
+	tool = kdiff3
+    diffstat = true
+    stat = true
+	conflictStyle = zdiff3
+[status]
+	submoduleSummary = true
+[diff]
+	submodule = log
+	algorithm = histogram
+    colorMoved = default
+[gpg]
+	program = gpg2
+[gui]
+	editor = /usr/bin/nvim-qt
+	historybrowser = gitk
+[cola]
+	fontdiff = Menlo,12,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+	tabwidth = 4
+	boldheaders = false
+	spellcheck = false
+	theme = default
+	checkconflicts = true
+	blameviewer = git gui blame
+	maxrecent = 20
+	linebreak = true
+	expandtab = false
+	statusshowtotals = true
+	statusindent = true
+	startupmode = list
+[difftool "sourcetree"]
+	cmd = opendiff \"$LOCAL\" \"$REMOTE\"
+	path = 
+[mergetool "sourcetree"]
+	cmd = /Applications/Sourcetree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
+	trustExitCode = true
+[init]
+	defaultBranch = main
+[pull]
+	ff = only
+[rerere]
+	enabled = true
+[url "git@github.com:"]
+    insteadOf = https://github.com/
+[url "git@bitbucket.org-personal:edudobay/"]
+    insteadOf = git@bitbucket.org:edudobay/
+[url "git@bitbucket.org:"]
+    insteadOf = https://bitbucket.org/
+[repo-roots]
+    default = ~/projects
+[receive]
+	denyCurrentBranch = refuse
+[commit]
+	verbose = true
+[core]
+    pager = delta
+	quotepath = off
+[interactive]
+    diffFilter = delta --color-only
+[delta]
+    navigate = true  # use n and N to move between diff sections
+    line-numbers = true
+[mailmap]
+	file = ~/Dropbox/gadle/mailmap
+[include]
+    path = ~/dotfiles/gitconfig.local
