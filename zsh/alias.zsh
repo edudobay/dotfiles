@@ -20,6 +20,9 @@ alias zzz='systemctl suspend'
 alias rw='repoweb'
 alias dibs='sudo chown $USER:'
 
+# https://granted.dev/
+alias assume=". assume"
+
 # ls colors
 if [[ $OSTYPE = darwin* ]]; then
   alias ls='ls -G'
