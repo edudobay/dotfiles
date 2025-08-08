@@ -17,6 +17,7 @@ antigen use oh-my-zsh
 
 antigen_add_bundles \
     git \
+    rkh/zsh-jj \
     fzf \
     zsh-users/zsh-syntax-highlighting
 
