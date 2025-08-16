@@ -16,6 +16,7 @@ alias ag='ag --hidden'
 
 alias ip4='ip -4 addr'
 
+alias dff='df -h -x squashfs -x tmpfs -x devtmpfs -x efivarfs'
 alias zzz='systemctl suspend'
 alias rw='repoweb'
 alias dibs='sudo chown $USER:'
