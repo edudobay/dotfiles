@@ -1,25 +1,24 @@
 ANTIGEN_THEME='edudobay/dotfiles@main zsh/themes/edudobay'
 declare -A ANTIGEN_BUNDLES_DISABLE
 
-[[ -f ~/.zshrc.before ]] && source ~/.zshrc.before
+ANTIGEN_ADD_BUNDLES=(
+    git
+    fzf
+    zsh-users/zsh-syntax-highlighting
+    # rkh/zsh-jj ## - disabled due to errors
+)
 
-antigen_add_bundles() {
-    for bundle; do
-        [[ ${ANTIGEN_BUNDLES_DISABLE[$bundle]} = 1 ]] && continue
-        antigen bundle "$bundle"
-    done
-}
+[[ -f ~/.zshrc.before ]] && source ~/.zshrc.before
 
 # ---- <Antigen>
 source ~/dotfiles/antigen.zsh
 
 antigen use oh-my-zsh
 
-antigen_add_bundles \
-    git \
-    rkh/zsh-jj \
-    fzf \
-    zsh-users/zsh-syntax-highlighting
+for bundle in ${ANTIGEN_ADD_BUNDLES[@]}; do
+    [[ ${ANTIGEN_BUNDLES_DISABLE[$bundle]} = 1 ]] && continue
+    antigen bundle "$bundle"
+done
 
 if [[ -n $ANTIGEN_THEME ]]; then
     antigen theme $=ANTIGEN_THEME
