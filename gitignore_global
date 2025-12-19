@@ -22,6 +22,7 @@ mise.toml.local
 *.iml
 
 .vscode/
+.cursor/
 
 .php_cs.cache
 
