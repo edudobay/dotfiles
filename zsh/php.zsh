@@ -11,12 +11,12 @@ _find_composer_root() {
 [[ -f ~/.cache/dotfiles/php_versions.sh ]] && source ~/.cache/dotfiles/php_versions.sh || true
 if [[ ${PHP_DIRS+x} = '' ]]; then # empty
     export COMPOSER_BIN=$(which composer)
-    eval "$(~/dotfiles/python/dotfiles/php_versions.py init)"
+    eval "$(~/dotfiles/python/src/dotfiles/php_versions.py init)"
 fi
 
 # TODO:
 chphp() {
-    new_path=$(~/dotfiles/python/dotfiles/php_versions.py switch "$1") || return 2
+    new_path=$(~/dotfiles/python/src/dotfiles/php_versions.py switch "$1") || return 2
     PATH=$new_path
 }
 

@@ -30,3 +30,16 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build]
 dev-mode-dirs = ["."]
+
+[tool.hatch.build.targets.wheel]
+sources = ["src"]
+packages = ["src/dotfiles"]
+only-packages = true
+#[tool.hatch.build.targets.sdist]
+#include = [
+#"dotfiles/**/*.py",
+#"easypickle.py",
+#"pagination_consumer.py",
+#"stopwatch.py",
+#"term_color.py",
+#]
