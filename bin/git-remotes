@@ -1,0 +1,267 @@
+#!/usr/bin/env python3
+"""
+List and manage Git remotes.
+
+Subcommands:
+
+    - list: List all Git remotes in the current repository.
+
+If no subcommand is provided, the script defaults to listing the remotes.
+
+## List
+
+Options:
+
+    - `-f`, `--format`: Output format (table or json). Default is table.
+
+Example output:
+
+(1) with format=table (default)
+
+origin    git@github.com:user/repo.git
+upstream  git@github.com:org/repo.git
+
+(1) with format=json
+
+{"name": "origin", "url": "git@github.com:user/repo.git"}
+{"name": "upstream", "url": "git@github.com:org/repo.git"}
+
+(2) with format=table (default)
+
+origin    git@github.com:user/repo.git
+upstream  git@readonly.com:org/repo.git (fetch)
+upstream  git@github.com:org/repo.git (push)
+
+(2) with format=json
+
+{"name": "origin", "url": "git@github.com:user/repo.git"}
+{"name": "upstream", "url": "git@readonly.com:org/repo.git", "push_url": "git@github.com:org/repo.git"}
+"""
+
+import sys
+import json
+import argparse
+import subprocess
+
+
+def get_remotes() -> list[dict]:
+    result = subprocess.run(
+        ["git", "config", "--list", "--local"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    remotes: dict[str, dict] = {}
+    for line in result.stdout.splitlines():
+        if "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        parts = key.split(".")
+        if len(parts) != 3 or parts[0] != "remote":
+            continue
+        _, name, field = parts
+        if field not in ("url", "pushurl"):
+            continue
+        if name not in remotes:
+            remotes[name] = {"name": name}
+        if field == "url":
+            remotes[name]["url"] = value
+        elif field == "pushurl":
+            remotes[name]["push_url"] = value
+
+    return [r for r in remotes.values() if "url" in r]
+
+
+def format_table(rows: list[list[str]]) -> str:
+    if not rows:
+        return ""
+    col_count = max(len(row) for row in rows)
+    widths = [0] * col_count
+    for row in rows:
+        for i, cell in enumerate(row):
+            widths[i] = max(widths[i], len(cell))
+    lines = []
+    for row in rows:
+        padded = [cell.ljust(widths[i]) for i, cell in enumerate(row)]
+        lines.append("  ".join(padded).rstrip())
+    return "\n".join(lines)
+
+
+def cmd_list(args):
+    remotes = get_remotes()
+    if args.format == "json":
+        for remote in remotes:
+            print(json.dumps(remote))
+    else:
+        rows = []
+        for remote in remotes:
+            name = remote["name"]
+            url = remote["url"]
+            push_url = remote.get("push_url")
+            if push_url:
+                rows.append([name, url + " (fetch)"])
+                rows.append([name, push_url + " (push)"])
+            else:
+                rows.append([name, url])
+        print(format_table(rows))
+
+
+def main():
+    parser = argparse.ArgumentParser(description="List and manage Git remotes.")
+    parser.add_argument("-f", "--format", choices=["table", "json"], default="table")
+    subparsers = parser.add_subparsers(dest="subcommand")
+    list_parser = subparsers.add_parser("list", help="List all remotes.")
+    list_parser.add_argument("-f", "--format", choices=["table", "json"], default="table")
+
+    args = parser.parse_args()
+    cmd_list(args)
+
+
+if __name__ == "__main__":
+    main()
+
+
+# --- Tests (pytest) ---
+
+def test_format_table_single_row():
+    result = format_table([["origin", "git@github.com:user/repo.git"]])
+    assert result == "origin  git@github.com:user/repo.git"
+
+
+def test_format_table_aligns_columns():
+    rows = [
+        ["origin", "git@github.com:user/repo.git"],
+        ["upstream", "git@github.com:org/repo.git"],
+    ]
+    result = format_table(rows)
+    lines = result.splitlines()
+    assert lines[0].startswith("origin  ")
+    assert lines[1].startswith("upstream")
+    # Both URLs should start at the same column
+    col = lines[0].index("git@")
+    assert lines[1].index("git@") == col
+
+
+def test_format_table_empty():
+    assert format_table([]) == ""
+
+
+def test_format_table_trailing_whitespace_stripped():
+    rows = [["a", "b"], ["longname", "b"]]
+    result = format_table(rows)
+    for line in result.splitlines():
+        assert line == line.rstrip()
+
+
+def test_get_remotes_single_url(monkeypatch):
+    output = "remote.origin.url=git@github.com:user/repo.git\n"
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *_, **__: type("R", (), {"stdout": output, "returncode": 0})(),
+    )
+    remotes = get_remotes()
+    assert remotes == [{"name": "origin", "url": "git@github.com:user/repo.git"}]
+
+
+def test_get_remotes_split_urls(monkeypatch):
+    output = (
+        "remote.upstream.url=git@readonly.com:org/repo.git\n"
+        "remote.upstream.pushurl=git@github.com:org/repo.git\n"
+    )
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *_, **__: type("R", (), {"stdout": output, "returncode": 0})(),
+    )
+    remotes = get_remotes()
+    assert remotes == [
+        {
+            "name": "upstream",
+            "url": "git@readonly.com:org/repo.git",
+            "push_url": "git@github.com:org/repo.git",
+        }
+    ]
+
+
+def test_get_remotes_ignores_non_remote_keys(monkeypatch):
+    output = (
+        "core.repositoryformatversion=0\n"
+        "remote.origin.url=git@github.com:user/repo.git\n"
+        "branch.main.remote=origin\n"
+    )
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *_, **__: type("R", (), {"stdout": output, "returncode": 0})(),
+    )
+    remotes = get_remotes()
+    assert len(remotes) == 1
+    assert remotes[0]["name"] == "origin"
+
+
+def test_cmd_list_table_single_url(monkeypatch, capsys):
+    monkeypatch.setattr(
+        "builtins.__import__",
+        __import__,
+    )
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *_, **__: type("R", (), {"stdout": "remote.origin.url=git@github.com:user/repo.git\n", "returncode": 0})(),
+    )
+    args = argparse.Namespace(format="table")
+    cmd_list(args)
+    out = capsys.readouterr().out.strip()
+    assert out == "origin  git@github.com:user/repo.git"
+
+
+def test_cmd_list_table_split_urls(monkeypatch, capsys):
+    output = (
+        "remote.upstream.url=git@readonly.com:org/repo.git\n"
+        "remote.upstream.pushurl=git@github.com:org/repo.git\n"
+    )
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *_, **__: type("R", (), {"stdout": output, "returncode": 0})(),
+    )
+    args = argparse.Namespace(format="table")
+    cmd_list(args)
+    out = capsys.readouterr().out.strip()
+    lines = out.splitlines()
+    assert len(lines) == 2
+    assert "(fetch)" in lines[0]
+    assert "(push)" in lines[1]
+
+
+def test_cmd_list_json_single_url(monkeypatch, capsys):
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *_, **__: type("R", (), {"stdout": "remote.origin.url=git@github.com:user/repo.git\n", "returncode": 0})(),
+    )
+    args = argparse.Namespace(format="json")
+    cmd_list(args)
+    out = capsys.readouterr().out.strip()
+    data = json.loads(out)
+    assert data == {"name": "origin", "url": "git@github.com:user/repo.git"}
+    assert "push_url" not in data
+
+
+def test_cmd_list_json_split_urls(monkeypatch, capsys):
+    output = (
+        "remote.upstream.url=git@readonly.com:org/repo.git\n"
+        "remote.upstream.pushurl=git@github.com:org/repo.git\n"
+    )
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *_, **__: type("R", (), {"stdout": output, "returncode": 0})(),
+    )
+    args = argparse.Namespace(format="json")
+    cmd_list(args)
+    out = capsys.readouterr().out.strip()
+    data = json.loads(out)
+    assert data["url"] == "git@readonly.com:org/repo.git"
+    assert data["push_url"] == "git@github.com:org/repo.git"
