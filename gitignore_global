@@ -29,3 +29,5 @@ mise.toml.local
 .mypy-cache/
 
 **/#*#
+
+.claude/
