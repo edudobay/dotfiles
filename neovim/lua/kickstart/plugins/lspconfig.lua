@@ -170,6 +170,19 @@ return {
             },
           },
         },
+
+        yamlls = {
+          settings = {
+            yaml = {
+              schemas = {
+                ['./src/Auth/Policy/Resources/policy_document.schema.json'] = {
+                  '/config/policies/**/*.yml',
+                  '/config/policies/**/*.yaml',
+                },
+              },
+            },
+          },
+        },
       }
 
       -- Ensure the servers and tools above are installed
@@ -199,12 +212,14 @@ return {
 
             -- Somehow the default 'settings' don't seem to be passed to the plugin.
             -- My manual implementation:
-            local configs = require 'lspconfig.configs'
-            if not configs[server_name] then
-              configs[server_name] = { default_config = server['settings'] or {} }
-            else
-              configs[server_name]['default_config'] = server['settings'] or {}
-            end
+            -- local configs = require 'lspconfig.configs'
+            -- if not configs[server_name] then
+            --   configs[server_name] = { default_config = server['settings'] or {} }
+            -- else
+            --   for k, v in pairs(server['settings'] or {}) do
+            --     configs[server_name]['default_config'][k] = v
+            --   end
+            -- end
 
             require('lspconfig')[server_name].setup(server)
           end,

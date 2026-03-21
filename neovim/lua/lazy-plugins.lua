@@ -11,6 +11,21 @@
 -- NOTE: Here is where you install your plugins.
 require('lazy').setup({
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
+
+  -- {
+  --   'tamago324/nlsp-settings.nvim',
+  --   init = function()
+  --     local nlspsettings = require 'nlspsettings'
+  --     nlspsettings.setup {
+  --       config_home = vim.fn.stdpath 'config' .. '/nlsp-settings',
+  --       local_settings_dir = '.nlsp-settings',
+  --       local_settings_root_markers_fallback = { '.git' },
+  --       append_default_schemas = true,
+  --       loader = 'json',
+  --     }
+  --   end,
+  -- },
+
   'tpope/vim-sleuth', -- Detect tabstop and shiftwidth automatically
 
   'editorconfig/editorconfig-vim',
@@ -23,13 +38,39 @@ require('lazy').setup({
   -- Highlight color names in the same color they represent
   'chrisbra/color_highlight',
 
-  -- Isn't working :(
   -- ack/ag (silver searcher)
   {
     'mileszs/ack.vim',
     init = function()
       vim.g.ackprg = 'ag --nogroup --nocolor --column --hidden'
     end,
+  },
+
+  'kassio/neoterm',
+
+  {
+    'johmsalas/text-case.nvim',
+    dependencies = { 'nvim-telescope/telescope.nvim' },
+    config = function()
+      require('textcase').setup {}
+      require('telescope').load_extension 'textcase'
+    end,
+    keys = {
+      'ga', -- Default invocation prefix
+      { 'ga.', '<cmd>TextCaseOpenTelescope<CR>', mode = { 'n', 'x' }, desc = 'Telescope' },
+    },
+    cmd = {
+      -- NOTE: The Subs command name can be customized via the option "substitude_command_name"
+      'Subs',
+      'TextCaseOpenTelescope',
+      'TextCaseOpenTelescopeQuickChange',
+      'TextCaseOpenTelescopeLSPChange',
+      'TextCaseStartReplacingCommand',
+    },
+    -- If you want to use the interactive feature of the `Subs` command right away, text-case.nvim
+    -- has to be loaded on startup. Otherwise, the interactive feature of the `Subs` will only be
+    -- available after the first executing of it or after a keymap of text-case.nvim has been used.
+    lazy = true,
   },
 
   {
