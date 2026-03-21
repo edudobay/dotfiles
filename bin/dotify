@@ -7,6 +7,10 @@ Manage linking of dotfiles from the home directory to a dotfiles directory
 # of something better.
 
 import os, sys, subprocess
+
+DOTFILES_ROOT = os.path.dirname(os.path.realpath(os.path.dirname(__file__)))
+sys.path.append((DOTFILES_ROOT + "/python/src"))
+
 from term_color import format as term_format
 from stat import S_ISDIR
 from ast import literal_eval
