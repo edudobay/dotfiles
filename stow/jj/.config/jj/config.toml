@@ -20,7 +20,9 @@ tug = ["bookmark", "move", "--from", "closest_bookmark(@-)", "--to", "@-"]
 
 # `jj l` shows commits on the working-copy commit's (anonymous) bookmark
 # compared to the `main` bookmark
-l = ["log", "-r", "(trunk()..@):: | (trunk()..@)-"]
+l = ["log", "-r", "(trunk()..@):: | (trunk()..@)- | ancestors(trunk(), 10)"]
+trunk = ["log", "-r", "ancestors(trunk(), 10)"]
+ll = ["log", "-r", "ancestors(@, 10)"]
 last = ["show", "@-"]
 df = ["diff"]
 
