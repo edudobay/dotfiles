@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+
+import socket
+import subprocess
+from argparse import ArgumentParser
+from datetime import datetime
+
+DEFAULT_TITLE = 'backup from {hostname} at {date}'
+DEFAULT_BODY = 'Backed up by CLI script'
+DEFAULT_DATE_FORMAT = '%Y-%m-%dT%H:%M'
+
+
+def get_git_config(key):
+    r = subprocess.run(['git', 'config', key], capture_output=True, text=True)
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
+def parse():
+    parser = ArgumentParser(
+        description='Stage all changes and create a backup commit.'
+    )
+    parser.add_argument(
+        '--title', '-t',
+        help=(
+            'commit title (first paragraph); supports {hostname} and {date} placeholders'
+            f' [git: backupall.title, default: "{DEFAULT_TITLE}"]'
+        ),
+    )
+    parser.add_argument(
+        '--body', '-b',
+        help=f'commit body (second paragraph) [git: backupall.body, default: "{DEFAULT_BODY}"]',
+    )
+    parser.add_argument(
+        '--no-body', dest='no_body', action='store_true',
+        help='omit the commit body paragraph',
+    )
+    parser.add_argument(
+        '--date-format', '-d',
+        help=f'strftime format for {{date}} in title [git: backupall.dateFormat, default: "{DEFAULT_DATE_FORMAT.replace("%", "%%")}"]',
+    )
+    return parser.parse_args()
+
+
+def resolve(cli_value, config_key, default):
+    if cli_value is not None:
+        return cli_value
+    cfg = get_git_config(config_key)
+    return cfg if cfg is not None else default
+
+
+def main():
+    args = parse()
+
+    date_format = resolve(args.date_format, 'backupall.dateFormat', DEFAULT_DATE_FORMAT)
+    title_template = resolve(args.title, 'backupall.title', DEFAULT_TITLE)
+
+    title = title_template.format(
+        hostname=socket.gethostname(),
+        date=datetime.now().strftime(date_format),
+    )
+
+    if args.no_body:
+        body = ''
+    else:
+        body = resolve(args.body, 'backupall.body', DEFAULT_BODY)
+
+    subprocess.run(['git', 'add', '.'], check=True)
+
+    commit_cmd = ['git', 'commit', '-m', title]
+    if body:
+        commit_cmd += ['-m', body]
+    subprocess.run(commit_cmd, check=True)
+
+
+if __name__ == '__main__':
+    main()
