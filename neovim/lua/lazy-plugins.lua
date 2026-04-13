@@ -115,7 +115,8 @@ require('lazy').setup({
 
   require 'kickstart/plugins/mini',
 
-  require 'kickstart/plugins/treesitter',
+  -- require 'kickstart/plugins/treesitter',
+  require 'kickstart/plugins/tree-sitter-manager',
 
   require 'kickstart/plugins/debug',
 
