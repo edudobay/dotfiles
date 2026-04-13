@@ -103,7 +103,7 @@ def main():
             command = ['unrar', 'x',
                 archive_path]
 
-        elif archive.endswith('.tar.bz2') or archive.endswith('.tar.gz') or archive.endswith('.tgz'):
+        elif archive.endswith('.tar.bz2') or archive.endswith('.tar.gz') or archive.endswith('.tgz') or archive.endswith('.tar.zst'):
             command = ['tar', '-C', dest, '-xaf', archive]
 
         else:
