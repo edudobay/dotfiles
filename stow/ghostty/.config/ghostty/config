@@ -4,7 +4,6 @@
 
 # Font
 font-size = 14
-font-family = "InputMono Nerd Font"
 adjust-cell-height = 4
 
 # Behavior
@@ -57,3 +56,4 @@ keybind = ctrl+shift+z=toggle_split_zoom
 keybind = ctrl+shift+space=equalize_splits
 
 config-file = "theme-Japanesque.conf"
+config-file = "?/home/eduardo/.config/ghostty-local.conf"
