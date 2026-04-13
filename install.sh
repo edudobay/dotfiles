@@ -9,13 +9,18 @@ cd
 PATH=$PATH:~/dotfiles/bin
 
 DOTLINKS=(
+	agignore
 	bashrc
 	gitconfig
 	profile
+	stowrc
+	terraformrc
 	tmux.conf
 	tmux.conf.user
+	XCompose
 	zshenv
 	zshrc
+	zshrc.local
 )
 
 STOW=(
@@ -78,6 +83,9 @@ stow_check_installed() {
     case "$DISTRO" in
         Debian|Ubuntu)
             sudo apt install stow
+            ;;
+        Arch)
+            sudo pacman -S stow
             ;;
         macos)
             brew install stow
