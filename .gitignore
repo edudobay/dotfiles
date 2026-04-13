@@ -1,6 +1,8 @@
+*.local
+
 __pycache__/
 *.py[co]
 .mypy_cache/
+.coverage
 
 /antigen.zsh
-gitconfig.local
