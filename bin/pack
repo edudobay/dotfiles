@@ -1,0 +1,89 @@
+#!/bin/bash
+
+set -o errexit
+
+source ~/dotfiles/lib/log.sh
+
+_assert_not_exists() {
+  if [[ -e "$1" ]]; then
+    log_error "ERROR: already exists: $1"
+    return 1
+  fi
+}
+
+_run() {
+  log_info "running: $@"
+  "$@"
+}
+
+_pack_tar() {
+  local parent=$(dirname "$1")
+  local name=$(basename "$1")
+  local dest="$parent/$name.tar"
+  _assert_not_exists "$dest"
+  _run tar -C "$parent" -cvf "$dest" "$name"
+}
+
+_pack_tgz() {
+  local parent=$(dirname "$1")
+  local name=$(basename "$1")
+  local dest="$parent/$name.tgz"
+  _assert_not_exists "$dest"
+  _run tar -C "$parent" -cvaf "$dest" "$name"
+}
+
+_confirm_delete() {
+  local file="$1"
+  local confirm
+  read -p "Delete $file? [y/N] " confirm
+  if [[ "${confirm,,}" == "y" ]]; then
+    _run rm -rf "$file"
+  fi
+}
+
+args=("$@")
+
+options=()
+files=()
+
+for arg in "${args[@]}"; do
+  if [[ "$arg" = -* ]]; then
+    options+=("$arg")
+  else
+    files+=("$arg")
+  fi
+done
+
+run_as=$(basename "$0")
+
+case "$run_as" in
+  pack.tar)
+    _pack_function=_pack_tar ;;
+  pack.gz|pack.tgz)
+    _pack_function=_pack_tgz ;;
+  *)
+    _pack_function=_pack_tgz ;;
+esac
+
+_delete=0
+
+for option in "${options[@]}"; do
+  case "$option" in
+    -D|--delete)
+      tty --silent && _delete=1 || log_info "not deleting files in non-interactive mode" ;;
+    --tar)
+      _pack_function=_pack_tar ;;
+    --tgz|--gz)
+      _pack_function=_pack_tgz ;;
+    *)
+      echo "unrecognized option: $option"
+      exit 1
+  esac
+done
+
+for file in "${files[@]}"; do
+  $_pack_function $file
+  if [[ $_delete == 1 ]]; then
+    _confirm_delete "$file"
+  fi
+done

@@ -1,0 +1,62 @@
+#!/bin/zsh
+
+PROG_NAME=$(basename $0)
+
+zparseopts -D -E \
+    m=move v=verbose n=dry_run
+
+die() {
+    print $@ 1>&2
+    exit 1
+}
+
+_do_move() {
+    [[ $# -eq 2 ]] || die "internal inconsistency: _do_move:argc = $#"
+    if [[ $verbose -ge 1 || -n $dry_run ]]; then
+        echo 'MOVE:' $1 '=>' $2
+    fi
+    if [[ -z $dry_run ]]; then
+        mv $1 $2
+    fi
+}
+
+_do_copy() {
+    [[ $# -eq 2 ]] || die "internal inconsistency: _do_copy:argc = $#"
+    if [[ $verbose -ge 1 || -n $dry_run ]]; then
+        echo 'COPY:' $1 '=>' $2
+    fi
+    if [[ -z $dry_run ]]; then
+        cp -a $1 $2
+    fi
+}
+
+_do_remove() {
+    [[ $# -eq 1 ]] || die "internal inconsistency: _do_remove:argc = $#"
+    if [[ $verbose -ge 1 || -n $dry_run ]]; then
+        echo 'REMOVE:' $1
+    fi
+    if [[ -z $dry_run ]]; then
+        rm $1
+    fi
+}
+
+_reify_link() {
+    [[ -h $link ]] || die "$link: not a symbolic link"
+
+    local link_dir target
+    link_dir=$(dirname $link)
+    target=$(readlink -e $link)
+
+    _do_remove $link
+    if [[ -n $move ]]; then
+        _do_move $target $link_dir
+    else
+        _do_copy $target $link_dir
+    fi
+}
+
+[[ $# -gt 0 ]] || die "$PROG_NAME: no input files"
+for link in $argv; do
+    _reify_link $link
+done
+
