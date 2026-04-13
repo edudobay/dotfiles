@@ -1,0 +1,3 @@
+--verbose
+--dir=~/dotfiles/stow
+--target=~
