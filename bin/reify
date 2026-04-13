@@ -3,12 +3,43 @@
 PROG_NAME=$(basename $0)
 
 zparseopts -D -E \
-    m=move v=verbose n=dry_run
+    h=help -help=help \
+    m=move -move=move \
+    v=verbose n=dry_run
 
 die() {
     print $@ 1>&2
     exit 1
 }
+
+usage() {
+    cat <<EOF
+Usage: $PROG_NAME [-m] [-v] [-n] LINK...
+
+Replace each symbolic LINK with the file or directory it points to,
+effectively "materializing" the link into a real copy in the same directory.
+
+Options:
+  -m, --move  Move (rename) the target instead of copying it. Useful when the
+              target is on the same filesystem and you want to avoid duplicating
+              data. The original target location will no longer exist.
+  -v          Verbose — print each operation (COPY/MOVE/REMOVE) as it runs.
+  -n          Dry run — print what would be done without making any changes.
+              Implies -v output.
+  -h, --help  Show this help message and exit.
+
+Examples:
+  $PROG_NAME ~/.vimrc            # replace symlink with a copy of the target
+  $PROG_NAME -m ~/.vimrc         # replace symlink by moving the target
+  $PROG_NAME -n ~/.vimrc         # preview without doing anything
+  $PROG_NAME -v ~/.vimrc ~/bin   # reify multiple links, showing progress
+EOF
+}
+
+if [[ -n $help ]]; then
+    usage
+    exit 0
+fi
 
 _do_move() {
     [[ $# -eq 2 ]] || die "internal inconsistency: _do_move:argc = $#"
