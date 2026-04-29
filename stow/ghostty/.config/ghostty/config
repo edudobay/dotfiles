@@ -10,7 +10,7 @@ adjust-cell-height = 4
 confirm-close-surface = true
 
 # Scrollback limit (in BYTES)
-scrollback-limit = 2000000
+scrollback-limit = 5000000
 
 # Keybindings — new tab/window (cwd inherited automatically)
 keybind = ctrl+shift+t=new_tab
