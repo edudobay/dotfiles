@@ -1,0 +1,1736 @@
+#!/usr/bin/env python3
+
+"""
+usage:
+    daterange [-F FORMAT] EXPR
+    daterange [-F FORMAT] --from START {--to END | --count COUNT} [--step STEP] [--filter FILTER]
+
+flags:
+    -F FORMAT, --format FORMAT     output format, where FORMAT is a strftime format expression
+
+dependencies:
+    python-dateutil
+"""
+
+import argparse
+import datetime
+import enum
+import re
+from dataclasses import dataclass
+from typing import Iterator, Literal, Optional, Union
+
+import pytest
+
+from dateutil.relativedelta import relativedelta
+
+SPEC = """
+Updated specification with `#count` and `@filter` support:
+
+# daterange CLI Specification
+
+## Overview
+
+`daterange` is a command-line utility that generates sequences of dates, times, or datetimes from a compact range expression.
+
+The core syntax is:
+
+```text
+START..END[/STEP][@FILTERS]
+```
+
+or:
+
+```text
+START..#COUNT[/STEP][@FILTERS]
+```
+
+Examples:
+
+```bash
+daterange today..+7d
+daterange now..+12h/30m
+daterange 09:00..17:00/1h
+daterange 2026-01..2026-12/P1M
+
+daterange today..#10/1d@monday
+daterange today..#20/1d@weekday
+```
+
+The tool must support:
+
+* date ranges
+* time-only ranges
+* datetime ranges
+* relative expressions
+* ISO-8601 durations
+* compact duration syntax
+* filters/selectors
+* count-based generation
+* explicit flag-based syntax as a wrapper around the core parser
+
+---
+
+# CLI Forms
+
+## Compact form
+
+```bash
+daterange RANGE
+```
+
+Where:
+
+```text
+RANGE :=
+    START ".." END [ "/" STEP ] [ "@" FILTERS ]
+  | START "..#" COUNT [ "/" STEP ] [ "@" FILTERS ]
+```
+
+Examples:
+
+```bash
+daterange today..+7d
+daterange now..+24h/6h
+daterange 09:00..02:00/1h
+
+daterange today..#10/1d@monday
+daterange today..#20/1d@weekday
+```
+
+---
+
+## Explicit form
+
+The following syntax is equivalent to the compact form:
+
+```bash
+daterange \
+  --from START \
+  [--to END] \
+  [--count COUNT] \
+  [--step STEP] \
+  [--filter FILTERS]
+```
+
+Examples:
+
+```bash
+daterange --from today --to +7d --step 1d
+
+daterange \
+  --from today \
+  --count 10 \
+  --step 1d \
+  --filter monday
+```
+
+Rules:
+
+* exactly one of `--to` or `--count` must be provided
+* `--filter` may be repeated
+* explicit form bypasses parsing of the compact container syntax
+
+Equivalent examples:
+
+```bash
+daterange today..#10/1d@monday
+```
+
+equals:
+
+```bash
+daterange \
+  --from today \
+  --count 10 \
+  --step 1d \
+  --filter monday
+```
+
+---
+
+# Type System
+
+The tool supports three resolved range types:
+
+* `date`
+* `time`
+* `datetime`
+
+The parser must infer the type automatically.
+
+---
+
+# Type Inference Rules
+
+## Date range
+
+If both endpoints are dates:
+
+```text
+2026-01-01..2026-01-05
+today..+7d
+```
+
+Result type: `date`
+
+---
+
+## Time range
+
+If both endpoints are time-only values:
+
+```text
+09:00..17:00
+22:00..02:00
+```
+
+Result type: `time`
+
+---
+
+## Datetime range
+
+If any endpoint contains both date and time:
+
+```text
+2026-01-01T10:00..2026-01-01T18:00
+now..+6h
+```
+
+Result type: `datetime`
+
+---
+
+# Ambiguity Handling
+
+Ambiguous expressions must fail with a clear error.
+
+Example:
+
+```text
+10..20
+```
+
+must not be interpreted heuristically.
+
+---
+
+# Supported Expressions
+
+## Absolute dates
+
+```text
+2026
+2026-05
+2026-05-10
+```
+
+---
+
+## Absolute times
+
+```text
+09:30
+09:30:15
+```
+
+---
+
+## Absolute datetimes
+
+Preferred format:
+
+```text
+2026-05-10T09:30
+2026-05-10T09:30:15Z
+```
+
+Optional relaxed format:
+
+```text
+2026-05-10 09:30
+```
+
+---
+
+## Relative expressions
+
+Relative expressions are evaluated against the logical "now".
+
+Examples:
+
+```text
++5d
+-2h
++3mo
+```
+
+Relative expressions may appear in either endpoint.
+
+---
+
+## Keywords
+
+Supported keywords:
+
+```text
+today
+yesterday
+tomorrow
+now
+```
+
+---
+
+# Duration Formats
+
+The parser must support both compact durations and ISO-8601 durations.
+
+These are equivalent representations.
+
+---
+
+## Compact duration syntax
+
+Examples:
+
+```text
+5d
+2w
+3mo
+1y
+12h
+30m
+15s
+```
+
+---
+
+## ISO-8601 duration syntax
+
+Examples:
+
+```text
+P5D
+P2W
+P3M
+P1Y
+PT12H
+PT30M
+```
+
+---
+
+# Internal Duration Normalization
+
+The implementation should normalize all durations into a single internal representation.
+
+Compact durations and ISO durations must behave identically.
+
+---
+
+# Calendar vs Exact Units
+
+The implementation must distinguish between:
+
+## Calendar units
+
+```text
+d
+w
+mo
+y
+```
+
+These follow calendar arithmetic semantics.
+
+Examples:
+
+* month boundaries
+* leap years
+* daylight-saving transitions
+
+---
+
+## Exact units
+
+```text
+h
+m
+s
+ms
+```
+
+These represent exact elapsed durations.
+
+Example:
+
+```text
+24h != 1d
+```
+
+across daylight-saving transitions.
+
+---
+
+# Month Arithmetic
+
+Month arithmetic must clamp to the last valid day of the target month.
+
+Example:
+
+```text
+2026-01-31 + 1mo
+=> 2026-02-28
+```
+
+---
+
+# Step Semantics
+
+## Step syntax
+
+```text
+/STEP
+```
+
+Examples:
+
+```text
+/1d
+/30m
+/P1M
+```
+
+---
+
+## Reachability rule
+
+Generated values must follow:
+
+```text
+value = START + n * STEP
+```
+
+A value is emitted only if it remains within the allowed range boundary.
+
+For range-based generation:
+
+```text
+value <= END
+```
+
+This means the generator truncates to the last reachable value and never emits partial or rounded values.
+
+Example:
+
+```text
+10:00..17:30/1h
+```
+
+produces:
+
+```text
+10:00
+11:00
+12:00
+13:00
+14:00
+15:00
+16:00
+17:00
+```
+
+---
+
+# Range Semantics
+
+Ranges are inclusive on both ends.
+
+Example:
+
+```text
+today..+3d
+```
+
+produces:
+
+```text
+today
+today+1d
+today+2d
+today+3d
+```
+
+provided the values are reachable by the step rule.
+
+---
+
+# Count-Based Generation
+
+Count-based generation uses:
+
+```text
+START..#COUNT[/STEP]
+```
+
+Semantics:
+
+* generation begins at `START`
+* generation advances by `STEP`
+* generation stops after emitting `COUNT` values
+* the starting value counts as the first emitted value
+
+Example:
+
+```text
+today..#4/5d
+```
+
+produces:
+
+```text
+today
+today+5d
+today+10d
+today+15d
+```
+
+---
+
+# Filters
+
+Filters operate after candidate sequence generation.
+
+Pipeline:
+
+```text
+1. generate candidate sequence
+2. apply filters
+3. emit remaining values
+4. stop when END or COUNT condition is satisfied
+```
+
+---
+
+## Filter syntax
+
+Compact form:
+
+```text
+@FILTER
+```
+
+Multiple filters:
+
+```text
+@FILTER1,FILTER2
+```
+
+Examples:
+
+```text
+@monday
+@tuesday
+@weekday
+@weekend
+```
+
+---
+
+## Explicit form
+
+```bash
+--filter monday
+--filter weekday
+```
+
+Multiple filters are combined with logical AND semantics.
+
+---
+
+# Day-of-Week Filters
+
+Examples:
+
+```bash
+daterange 2025-01..2025-06/1d@tuesday
+```
+
+All Tuesdays during the first half of 2025.
+
+---
+
+```bash
+daterange today..#10/1d@monday
+```
+
+Next 10 Mondays starting from today.
+
+---
+
+```bash
+daterange today..#20/1d@weekday
+```
+
+Next 20 weekdays.
+
+---
+
+# Time-Only Wrap-Around
+
+Time-only ranges support wrap-around semantics.
+
+If the end time is earlier than the start time, the range crosses midnight.
+
+Example:
+
+```text
+22:00..02:00/1h
+```
+
+produces:
+
+```text
+22:00
+23:00
+00:00
+01:00
+02:00
+```
+
+This behavior applies only to time-only ranges.
+
+---
+
+# Error Handling
+
+The implementation must fail with explicit errors for:
+
+* ambiguous expressions
+* invalid dates/times
+* invalid durations
+* incompatible types
+* zero or negative step sizes
+* impossible ranges
+* malformed syntax
+* conflicting `--to` and `--count`
+
+---
+
+# Output
+
+Default output format should preserve the resolved type.
+
+## Date
+
+```text
+2026-05-10
+```
+
+## Time
+
+```text
+09:30:00
+```
+
+## Datetime
+
+```text
+2026-05-10T09:30:00Z
+```
+
+Timezone behavior should initially remain implementation-defined, but the design must remain extensible for future timezone-aware support.
+
+---
+
+# Recommended Internal Architecture
+
+Recommended stages:
+
+1. tokenize input
+2. parse AST
+3. infer range type
+4. normalize durations
+5. resolve relative expressions
+6. generate candidate sequence
+7. apply filters
+8. stop according to END or COUNT
+9. format output
+
+---
+
+# Suggested AST
+
+```text
+Range {
+  start: Expr
+
+  mode:
+    EndMode(end_expr)
+    CountMode(count)
+
+  step: Option<Duration>
+
+  filters: Vec<FilterExpr>
+}
+```
+
+---
+
+# Recommended Expression Node Types
+
+```text
+DateExpr
+TimeExpr
+DateTimeExpr
+RelativeExpr
+KeywordExpr
+```
+
+---
+
+# Recommended Filter Node Types
+
+```text
+WeekdayFilter
+WeekendFilter
+DayOfWeekFilter
+```
+"""
+
+
+class IsoWeekday(enum.IntEnum):
+    Monday = 1
+    Tuesday = 2
+    Wednesday = 3
+    Thursday = 4
+    Friday = 5
+    Saturday = 6
+    Sunday = 7
+
+
+class PeriodType(enum.Enum):
+    DAY = 'day'
+    WEEK = 'week'
+    MONTH = 'month'
+    YEAR = 'year'
+
+
+def period_format(
+    one: str,
+    other: Optional[str] = None,
+    **kwargs
+) -> dict[str, Optional[str]]:
+    return {
+        'one': one,
+        'other': other,
+        **kwargs,
+    }
+
+
+DEFAULT_LANGUAGE = 'en'
+PERIOD_FORMATS = {
+    'en': {
+        'next': ['next'],
+        'last': ['last'],
+        PeriodType.DAY: period_format('day', 'days'),
+        PeriodType.WEEK: period_format('week', 'weeks'),
+        PeriodType.MONTH: period_format('month', 'months'),
+        PeriodType.YEAR: period_format('year', 'years'),
+    },
+}
+
+
+# ---------------------------------------------------------------------------
+# Duration
+# ---------------------------------------------------------------------------
+
+@dataclass
+class Duration:
+    years: int = 0
+    months: int = 0
+    weeks: int = 0
+    days: int = 0
+    hours: int = 0
+    minutes: int = 0
+    seconds: int = 0
+    milliseconds: int = 0
+
+    def is_zero(self) -> bool:
+        return all(
+            v == 0 for v in (
+                self.years, self.months, self.weeks, self.days,
+                self.hours, self.minutes, self.seconds, self.milliseconds,
+            )
+        )
+
+    def is_positive(self) -> bool:
+        """True when at least one field is positive and none are negative."""
+        values = [
+            self.years, self.months, self.weeks, self.days,
+            self.hours, self.minutes, self.seconds, self.milliseconds,
+        ]
+        return any(v > 0 for v in values) and all(v >= 0 for v in values)
+
+    def multiply(self, n: int) -> 'Duration':
+        return Duration(
+            years=self.years * n,
+            months=self.months * n,
+            weeks=self.weeks * n,
+            days=self.days * n,
+            hours=self.hours * n,
+            minutes=self.minutes * n,
+            seconds=self.seconds * n,
+            milliseconds=self.milliseconds * n,
+        )
+
+    def _relative_delta(self) -> relativedelta:
+        return relativedelta(
+            years=self.years,
+            months=self.months,
+            weeks=self.weeks,
+            days=self.days,
+        )
+
+    def _time_delta(self) -> datetime.timedelta:
+        return datetime.timedelta(
+            hours=self.hours,
+            minutes=self.minutes,
+            seconds=self.seconds,
+            milliseconds=self.milliseconds,
+        )
+
+    def add_to_date(self, d: datetime.date) -> datetime.date:
+        if self.hours or self.minutes or self.seconds or self.milliseconds:
+            raise ValueError("Cannot add time-unit duration to a date")
+        return d + self._relative_delta()
+
+    def add_to_datetime(self, dt: datetime.datetime) -> datetime.datetime:
+        return dt + self._relative_delta() + self._time_delta()
+
+    def add_to_time(self, t: datetime.time, *, wrap: bool = True) -> datetime.time:
+        if self.years or self.months or self.weeks or self.days:
+            raise ValueError("Cannot add calendar-unit duration to a time")
+        total_seconds = (
+            t.hour * 3600 + t.minute * 60 + t.second
+            + self.hours * 3600 + self.minutes * 60 + self.seconds
+            + self.milliseconds // 1000
+        )
+        if wrap:
+            total_seconds %= 86400
+        h, rem = divmod(total_seconds, 3600)
+        m, s = divmod(rem, 60)
+        return datetime.time(h % 24, m, s)
+
+    def total_time_seconds(self) -> int:
+        """Total seconds represented by exact (time) fields only."""
+        return (
+            self.hours * 3600 + self.minutes * 60
+            + self.seconds + self.milliseconds // 1000
+        )
+
+
+# ---------------------------------------------------------------------------
+# AST — Expr types
+# ---------------------------------------------------------------------------
+
+@dataclass
+class DateExpr:
+    year: int
+    month: Optional[int] = None
+    day: Optional[int] = None
+
+
+@dataclass
+class TimeExpr:
+    hour: int
+    minute: int
+    second: int = 0
+
+
+@dataclass
+class DateTimeExpr:
+    date_part: DateExpr
+    time_part: TimeExpr
+
+
+@dataclass
+class KeywordExpr:
+    keyword: str  # 'today' | 'yesterday' | 'tomorrow' | 'now'
+
+
+@dataclass
+class RelativeExpr:
+    duration: Duration  # sign encoded in field values
+
+
+Expr = Union[DateExpr, TimeExpr, DateTimeExpr, KeywordExpr, RelativeExpr]
+
+
+# ---------------------------------------------------------------------------
+# AST — Range mode
+# ---------------------------------------------------------------------------
+
+@dataclass
+class EndMode:
+    end_expr: Expr
+
+
+@dataclass
+class CountMode:
+    count: int
+
+
+RangeMode = Union[EndMode, CountMode]
+
+
+# ---------------------------------------------------------------------------
+# AST — Filter types
+# ---------------------------------------------------------------------------
+
+@dataclass
+class WeekdayFilter:
+    pass
+
+
+@dataclass
+class WeekendFilter:
+    pass
+
+
+@dataclass
+class DayOfWeekFilter:
+    weekday: IsoWeekday
+
+
+FilterExpr = Union[WeekdayFilter, WeekendFilter, DayOfWeekFilter]
+
+
+# ---------------------------------------------------------------------------
+# AST — Range
+# ---------------------------------------------------------------------------
+
+@dataclass
+class Range:
+    start: Expr
+    mode: RangeMode
+    step: Optional[Duration]
+    filters: list[FilterExpr]
+
+
+# ---------------------------------------------------------------------------
+# RangeType enum
+# ---------------------------------------------------------------------------
+
+class RangeType(enum.Enum):
+    DATE = 'date'
+    TIME = 'time'
+    DATETIME = 'datetime'
+
+
+# ---------------------------------------------------------------------------
+# Parsing helpers
+# ---------------------------------------------------------------------------
+
+_COMPACT_DURATION_RE = re.compile(r'^(\d+)(ms|mo|[dwyhms])$')
+_ISO_DURATION_RE = re.compile(
+    r'^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?'
+    r'(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$'
+)
+_RELATIVE_RE = re.compile(r'^([+-])(\d+)(ms|mo|[dwyhms])$')
+_DATETIME_RE = re.compile(
+    r'^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:Z)?$'
+)
+_DATE_RE = re.compile(r'^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$')
+_TIME_RE = re.compile(r'^(\d{2}):(\d{2})(?::(\d{2}))?$')
+
+_COMPACT_UNIT_MAP = {
+    'ms': 'milliseconds',
+    'mo': 'months',
+    's':  'seconds',
+    'm':  'minutes',
+    'h':  'hours',
+    'd':  'days',
+    'w':  'weeks',
+    'y':  'years',
+}
+
+_KEYWORD_DATE = {'today', 'yesterday', 'tomorrow'}
+_KEYWORD_DATETIME = {'now'}
+_KEYWORDS = _KEYWORD_DATE | _KEYWORD_DATETIME
+
+_WEEKDAY_NAMES = {
+    'monday':    IsoWeekday.Monday,
+    'tuesday':   IsoWeekday.Tuesday,
+    'wednesday': IsoWeekday.Wednesday,
+    'thursday':  IsoWeekday.Thursday,
+    'friday':    IsoWeekday.Friday,
+    'saturday':  IsoWeekday.Saturday,
+    'sunday':    IsoWeekday.Sunday,
+}
+
+
+def parse_duration(s: str) -> Duration:
+    """Parse a compact ('5d', '3mo') or ISO-8601 ('P5D', 'PT12H') duration string."""
+    if s.upper().startswith('P'):
+        m = _ISO_DURATION_RE.match(s.upper())
+        if not m:
+            raise ValueError(f"Invalid ISO-8601 duration: {s!r}")
+        years, months, weeks, days, hours, minutes, seconds = (
+            int(v) if v else 0 for v in m.groups()
+        )
+        if all(v == 0 for v in (years, months, weeks, days, hours, minutes, seconds)):
+            raise ValueError(f"Duration must not be zero: {s!r}")
+        return Duration(
+            years=years, months=months, weeks=weeks, days=days,
+            hours=hours, minutes=minutes, seconds=seconds,
+        )
+    m = _COMPACT_DURATION_RE.match(s)
+    if not m:
+        raise ValueError(f"Invalid duration: {s!r}")
+    value, unit = int(m.group(1)), m.group(2)
+    if value == 0:
+        raise ValueError(f"Duration must not be zero: {s!r}")
+    return Duration(**{_COMPACT_UNIT_MAP[unit]: value})
+
+
+def parse_expr(s: str) -> Expr:
+    """Parse an endpoint expression into an Expr AST node."""
+    # Keywords
+    if s in _KEYWORDS:
+        return KeywordExpr(s)
+
+    # Relative: +5d, -2h, +3mo
+    m = _RELATIVE_RE.match(s)
+    if m:
+        sign, value, unit = m.group(1), int(m.group(2)), m.group(3)
+        if value == 0:
+            raise ValueError(f"Relative expression must be non-zero: {s!r}")
+        amount = value if sign == '+' else -value
+        return RelativeExpr(Duration(**{_COMPACT_UNIT_MAP[unit]: amount}))
+
+    # Datetime: 2026-05-10T09:30 or 2026-05-10 09:30
+    m = _DATETIME_RE.match(s)
+    if m:
+        year, month, day, hour, minute = (int(m.group(i)) for i in range(1, 6))
+        second = int(m.group(6)) if m.group(6) else 0
+        _validate_date(year, month, day, s)
+        _validate_time(hour, minute, second, s)
+        return DateTimeExpr(DateExpr(year, month, day), TimeExpr(hour, minute, second))
+
+    # Date: 2026 / 2026-05 / 2026-05-10
+    m = _DATE_RE.match(s)
+    if m:
+        year = int(m.group(1))
+        month = int(m.group(2)) if m.group(2) else None
+        day = int(m.group(3)) if m.group(3) else None
+        if month is not None:
+            _validate_month(month, s)
+        if day is not None:
+            assert month is not None  # regex nesting guarantees this
+            _validate_date(year, month, day, s)
+        return DateExpr(year, month, day)
+
+    # Time: 09:30 / 09:30:15
+    m = _TIME_RE.match(s)
+    if m:
+        hour, minute = int(m.group(1)), int(m.group(2))
+        second = int(m.group(3)) if m.group(3) else 0
+        _validate_time(hour, minute, second, s)
+        return TimeExpr(hour, minute, second)
+
+    raise ValueError(f"Unrecognized or ambiguous expression: {s!r}")
+
+
+def _validate_month(month: int, source: str) -> None:
+    if not (1 <= month <= 12):
+        raise ValueError(f"Invalid month {month} in {source!r}")
+
+
+def _validate_date(year: int, month: int, day: int, source: str) -> None:
+    try:
+        datetime.date(year, month, day)
+    except ValueError:
+        raise ValueError(f"Invalid date in {source!r}")
+
+
+def _validate_time(hour: int, minute: int, second: int, source: str) -> None:
+    try:
+        datetime.time(hour, minute, second)
+    except ValueError:
+        raise ValueError(f"Invalid time in {source!r}")
+
+
+def parse_filter(s: str) -> FilterExpr:
+    """Parse a single filter name into a FilterExpr."""
+    lower = s.strip().lower()
+    if lower == 'weekday':
+        return WeekdayFilter()
+    if lower == 'weekend':
+        return WeekendFilter()
+    if lower in _WEEKDAY_NAMES:
+        return DayOfWeekFilter(_WEEKDAY_NAMES[lower])
+    raise ValueError(f"Unknown filter: {s!r}. Expected weekday, weekend, or a day name.")
+
+
+def parse_filters(s: str) -> list[FilterExpr]:
+    """Parse a comma-separated filter string (without the leading '@')."""
+    return [parse_filter(part) for part in s.split(',')]
+
+
+def parse_compact(s: str) -> Range:
+    """Parse a full compact range expression."""
+    # 1. Split off @FILTERS suffix
+    filters: list[FilterExpr] = []
+    if '@' in s:
+        at_pos = s.index('@')
+        filters = parse_filters(s[at_pos + 1:])
+        s = s[:at_pos]
+
+    # 2. Split off /STEP
+    step: Optional[Duration] = None
+    if '/' in s:
+        slash_pos = s.index('/')
+        step = parse_duration(s[slash_pos + 1:])
+        s = s[:slash_pos]
+
+    # 3. Detect count vs end mode and split on '..'
+    if '..#' in s:
+        dot_pos = s.index('..#')
+        start_str = s[:dot_pos]
+        count_str = s[dot_pos + 3:]
+        try:
+            count = int(count_str)
+        except ValueError:
+            raise ValueError(f"Expected integer after ..#, got {count_str!r}")
+        if count < 1:
+            raise ValueError(f"Count must be at least 1, got {count}")
+        start = parse_expr(start_str)
+        return Range(start=start, mode=CountMode(count), step=step, filters=filters)
+
+    if '..' not in s:
+        raise ValueError(f"Missing '..' separator in range expression: {s!r}")
+    dot_pos = s.index('..')
+    start_str = s[:dot_pos]
+    end_str = s[dot_pos + 2:]
+    if not start_str:
+        raise ValueError("Missing start expression before '..'")
+    if not end_str:
+        raise ValueError("Missing end expression after '..'")
+    start = parse_expr(start_str)
+    end = parse_expr(end_str)
+    return Range(start=start, mode=EndMode(end), step=step, filters=filters)
+
+
+def parse(s: str) -> Range:
+    return parse_compact(s)
+
+
+# ---------------------------------------------------------------------------
+# Type inference
+# ---------------------------------------------------------------------------
+
+def _expr_base_type(expr: Expr) -> Optional[RangeType]:
+    """Return the intrinsic type of an expression, or None if it's polymorphic."""
+    if isinstance(expr, DateExpr):
+        return RangeType.DATE
+    if isinstance(expr, TimeExpr):
+        return RangeType.TIME
+    if isinstance(expr, DateTimeExpr):
+        return RangeType.DATETIME
+    if isinstance(expr, KeywordExpr):
+        if expr.keyword in _KEYWORD_DATE:
+            return RangeType.DATE
+        if expr.keyword in _KEYWORD_DATETIME:
+            return RangeType.DATETIME
+    if isinstance(expr, RelativeExpr):
+        return None  # polymorphic
+    return None
+
+
+def infer_range_type(start: Expr, mode: RangeMode) -> RangeType:
+    """Infer the range type from the start and end expressions."""
+    start_type = _expr_base_type(start)
+
+    if isinstance(mode, CountMode):
+        if start_type is None:
+            raise ValueError(
+                "Cannot infer range type: start expression is relative with no type anchor"
+            )
+        return start_type
+
+    end_type = _expr_base_type(mode.end_expr)
+
+    if start_type is None and end_type is None:
+        raise ValueError(
+            "Cannot infer range type: both endpoints are relative with no type anchor"
+        )
+    if start_type is None:
+        return end_type  # type: ignore[return-value]
+    if end_type is None:
+        return start_type
+
+    if start_type != end_type:
+        raise ValueError(
+            f"Incompatible endpoint types: {start_type.value} and {end_type.value}"
+        )
+    return start_type
+
+
+# ---------------------------------------------------------------------------
+# Resolution
+# ---------------------------------------------------------------------------
+
+def _last_day_of_month(year: int, month: int) -> int:
+    if month == 12:
+        return 31
+    return (datetime.date(year, month + 1, 1) - datetime.timedelta(days=1)).day
+
+
+def resolve_expr(
+    expr: Expr,
+    range_type: RangeType,
+    now: datetime.datetime,
+    role: Literal['start', 'end'],
+) -> Union[datetime.date, datetime.time, datetime.datetime]:
+    if isinstance(expr, KeywordExpr):
+        if expr.keyword == 'today':
+            return now.date()
+        if expr.keyword == 'yesterday':
+            return now.date() - datetime.timedelta(days=1)
+        if expr.keyword == 'tomorrow':
+            return now.date() + datetime.timedelta(days=1)
+        if expr.keyword == 'now':
+            return now
+        raise ValueError(f"Unknown keyword: {expr.keyword!r}")
+
+    if isinstance(expr, DateExpr):
+        year, month, day = expr.year, expr.month, expr.day
+        if month is None:
+            month = 1 if role == 'start' else 12
+        if day is None:
+            day = 1 if role == 'start' else _last_day_of_month(year, month)
+        return datetime.date(year, month, day)
+
+    if isinstance(expr, TimeExpr):
+        return datetime.time(expr.hour, expr.minute, expr.second)
+
+    if isinstance(expr, DateTimeExpr):
+        dp, tp = expr.date_part, expr.time_part
+        year = dp.year
+        month = dp.month if dp.month is not None else (1 if role == 'start' else 12)
+        day = dp.day if dp.day is not None else (1 if role == 'start' else _last_day_of_month(year, month))
+        return datetime.datetime(year, month, day, tp.hour, tp.minute, tp.second)
+
+    if isinstance(expr, RelativeExpr):
+        dur = expr.duration
+        resolved = dur.add_to_datetime(now)
+        if range_type == RangeType.DATE:
+            return resolved.date()
+        if range_type == RangeType.TIME:
+            return resolved.time()
+        return resolved
+
+    raise ValueError(f"Unknown expression type: {type(expr)}")
+
+
+def default_step(range_type: RangeType) -> Duration:
+    if range_type == RangeType.DATE:
+        return Duration(days=1)
+    return Duration(hours=1)
+
+
+# ---------------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------------
+
+def validate_range(
+    range_type: RangeType,
+    start: Union[datetime.date, datetime.time, datetime.datetime],
+    mode: Union['_ResolvedEndMode', CountMode],
+    step: Duration,
+    filters: list[FilterExpr],
+    wrap_around: bool,
+) -> None:
+    if step.is_zero():
+        raise ValueError("Step must not be zero")
+    if not step.is_positive():
+        raise ValueError("Step must be positive (no negative fields)")
+
+    if isinstance(mode, _ResolvedEndMode):
+        end = mode.end
+        if range_type == RangeType.TIME:
+            if not wrap_around and end < start:  # type: ignore[operator]
+                raise ValueError(
+                    f"End time {end} is before start time {start}. "
+                    "For midnight-crossing ranges this is handled automatically."
+                )
+        else:
+            if end < start:  # type: ignore[operator]
+                raise ValueError(f"End {end} is before start {start}")
+
+    if isinstance(mode, CountMode) and mode.count < 1:
+        raise ValueError(f"Count must be at least 1, got {mode.count}")
+
+    if range_type == RangeType.TIME and filters:
+        raise ValueError("Day-of-week filters are incompatible with time-only ranges")
+
+
+@dataclass
+class _ResolvedEndMode:
+    end: Union[datetime.date, datetime.time, datetime.datetime]
+
+
+# ---------------------------------------------------------------------------
+# Generation
+# ---------------------------------------------------------------------------
+
+def _generate_dates(
+    start: datetime.date,
+    mode: Union[_ResolvedEndMode, CountMode],
+    step: Duration,
+) -> Iterator[datetime.date]:
+    n = 0
+    while True:
+        value = step.multiply(n).add_to_date(start)
+        if isinstance(mode, _ResolvedEndMode):
+            if value > mode.end:  # type: ignore[operator]
+                break
+            yield value
+        else:
+            yield value
+        n += 1
+
+
+def _generate_times(
+    start: datetime.time,
+    mode: Union[_ResolvedEndMode, CountMode],
+    step: Duration,
+    wrap_around: bool,
+) -> Iterator[datetime.time]:
+    step_secs = step.total_time_seconds()
+    if step_secs <= 0:
+        raise ValueError("Step must produce a positive number of seconds for time ranges")
+
+    start_secs = start.hour * 3600 + start.minute * 60 + start.second
+    n = 0
+    while True:
+        total = start_secs + n * step_secs
+        if isinstance(mode, _ResolvedEndMode):
+            end: datetime.time = mode.end  # type: ignore[assignment]
+            end_secs = end.hour * 3600 + end.minute * 60 + end.second
+            if wrap_around:
+                end_secs += 86400
+            if total > end_secs:
+                break
+        wrapped = total % 86400
+        h, rem = divmod(wrapped, 3600)
+        m, s = divmod(rem, 60)
+        yield datetime.time(h, m, s)
+        n += 1
+
+
+def _generate_datetimes(
+    start: datetime.datetime,
+    mode: Union[_ResolvedEndMode, CountMode],
+    step: Duration,
+) -> Iterator[datetime.datetime]:
+    n = 0
+    while True:
+        value = step.multiply(n).add_to_datetime(start)
+        if isinstance(mode, _ResolvedEndMode):
+            if value > mode.end:  # type: ignore[operator]
+                break
+            yield value
+        else:
+            yield value
+        n += 1
+
+
+def generate(
+    range_type: RangeType,
+    start: Union[datetime.date, datetime.time, datetime.datetime],
+    mode: Union[_ResolvedEndMode, CountMode],
+    step: Duration,
+    wrap_around: bool,
+) -> Iterator[Union[datetime.date, datetime.time, datetime.datetime]]:
+    if range_type == RangeType.DATE:
+        yield from _generate_dates(start, mode, step)  # type: ignore[arg-type]
+    elif range_type == RangeType.TIME:
+        yield from _generate_times(start, mode, step, wrap_around)  # type: ignore[arg-type]
+    else:
+        yield from _generate_datetimes(start, mode, step)  # type: ignore[arg-type]
+
+
+# ---------------------------------------------------------------------------
+# Filter application
+# ---------------------------------------------------------------------------
+
+def _matches_filter(
+    value: Union[datetime.date, datetime.time, datetime.datetime],
+    f: FilterExpr,
+) -> bool:
+    if isinstance(value, datetime.time):
+        return True  # validated to not reach here with day filters
+    wd = IsoWeekday(value.isoweekday())
+    if isinstance(f, WeekdayFilter):
+        return wd <= IsoWeekday.Friday
+    if isinstance(f, WeekendFilter):
+        return wd >= IsoWeekday.Saturday
+    if isinstance(f, DayOfWeekFilter):
+        return wd == f.weekday
+    return True
+
+
+def apply_filters(
+    it: Iterator,
+    filters: list[FilterExpr],
+    mode: Union[_ResolvedEndMode, CountMode],
+) -> Iterator:
+    if not filters:
+        if isinstance(mode, CountMode):
+            for i, value in enumerate(it):
+                yield value
+                if i + 1 >= mode.count:
+                    break
+        else:
+            yield from it
+        return
+
+    emitted = 0
+    for value in it:
+        if all(_matches_filter(value, f) for f in filters):
+            yield value
+            emitted += 1
+            if isinstance(mode, CountMode) and emitted >= mode.count:
+                break
+
+
+# ---------------------------------------------------------------------------
+# Output formatting
+# ---------------------------------------------------------------------------
+
+_DEFAULT_FORMATS = {
+    RangeType.DATE: '%Y-%m-%d',
+    RangeType.TIME: '%H:%M:%S',
+    RangeType.DATETIME: '%Y-%m-%dT%H:%M:%S',
+}
+
+
+def format_value(
+    value: Union[datetime.date, datetime.time, datetime.datetime],
+    range_type: RangeType,
+    fmt: Optional[str],
+) -> str:
+    effective_fmt = fmt or _DEFAULT_FORMATS[range_type]
+    return value.strftime(effective_fmt)
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog='daterange',
+        description='Generate sequences of dates, times, or datetimes.',
+        add_help=True,
+    )
+    p.add_argument('-F', '--format', dest='format', default=None, metavar='FORMAT',
+                   help='strftime output format')
+    p.add_argument('--from', dest='from_', default=None, metavar='START',
+                   help='start expression (explicit form)')
+    p.add_argument('--to', default=None, metavar='END',
+                   help='end expression (explicit form)')
+    p.add_argument('--count', type=int, default=None, metavar='COUNT',
+                   help='number of values to emit (explicit form)')
+    p.add_argument('--step', default=None, metavar='STEP',
+                   help='step duration (explicit form)')
+    p.add_argument('--filter', dest='filters', action='append', default=[],
+                   metavar='FILTER',
+                   help='filter by weekday/weekend/day-name (may be repeated)')
+    p.add_argument('expr', nargs='?', default=None, metavar='EXPR',
+                   help='compact range expression (compact form)')
+    return p
+
+
+def build_range_from_explicit(args: argparse.Namespace) -> Range:
+    try:
+        start_expr = parse_expr(args.from_)
+    except ValueError as e:
+        raise ValueError(f"Invalid --from value: {e}") from e
+
+    if args.to is not None:
+        try:
+            end_expr = parse_expr(args.to)
+        except ValueError as e:
+            raise ValueError(f"Invalid --to value: {e}") from e
+        mode: RangeMode = EndMode(end_expr)
+    else:
+        if args.count < 1:
+            raise ValueError(f"--count must be at least 1, got {args.count}")
+        mode = CountMode(args.count)
+
+    step: Optional[Duration] = None
+    if args.step is not None:
+        try:
+            step = parse_duration(args.step)
+        except ValueError as e:
+            raise ValueError(f"Invalid --step value: {e}") from e
+
+    filters: list[FilterExpr] = []
+    for f in args.filters:
+        try:
+            filters.append(parse_filter(f))
+        except ValueError as e:
+            raise ValueError(f"Invalid --filter value: {e}") from e
+
+    return Range(start=start_expr, mode=mode, step=step, filters=filters)
+
+
+def run_pipeline(
+    range_ast: Range,
+    fmt: Optional[str] = None,
+    now: Optional[datetime.datetime] = None,
+) -> list[str]:
+    """Resolve, generate, filter, and format a parsed Range. Returns output lines.
+
+    Raises ValueError for any invalid input. Useful for testing and for main().
+    """
+    if now is None:
+        now = datetime.datetime.now()
+
+    range_type = infer_range_type(range_ast.start, range_ast.mode)
+
+    resolved_start = resolve_expr(range_ast.start, range_type, now, role='start')
+
+    if isinstance(range_ast.mode, EndMode):
+        resolved_end = resolve_expr(range_ast.mode.end_expr, range_type, now, role='end')
+        resolved_mode: Union[_ResolvedEndMode, CountMode] = _ResolvedEndMode(resolved_end)
+    else:
+        resolved_mode = range_ast.mode
+
+    step = range_ast.step or default_step(range_type)
+
+    wrap_around = (
+        range_type == RangeType.TIME
+        and isinstance(resolved_mode, _ResolvedEndMode)
+        and resolved_mode.end < resolved_start  # type: ignore[operator]
+    )
+
+    validate_range(
+        range_type, resolved_start, resolved_mode, step,
+        range_ast.filters, wrap_around,
+    )
+
+    raw = generate(range_type, resolved_start, resolved_mode, step, wrap_around)
+    output = apply_filters(raw, range_ast.filters, resolved_mode)
+    return [format_value(v, range_type, fmt) for v in output]
+
+
+def main() -> None:
+    parser = build_parser()
+    args = parser.parse_args()
+
+    using_explicit = args.from_ is not None
+    using_compact = args.expr is not None
+
+    if using_explicit and using_compact:
+        parser.error("Cannot combine positional EXPR with --from")
+    if not using_explicit and not using_compact:
+        parser.error("Must provide either EXPR or --from")
+    if using_compact and (args.to or args.count is not None or args.step or args.filters):
+        parser.error("Cannot combine positional EXPR with --to/--count/--step/--filter")
+    if using_explicit:
+        if args.to is not None and args.count is not None:
+            parser.error("Cannot specify both --to and --count")
+        if args.to is None and args.count is None:
+            parser.error("Must specify either --to or --count when using --from")
+
+    try:
+        range_ast = parse(args.expr) if using_compact else build_range_from_explicit(args)
+        lines = run_pipeline(range_ast, fmt=args.format)
+    except ValueError as e:
+        parser.error(str(e))
+        return
+
+    for line in lines:
+        print(line)
+
+
+if __name__ == '__main__':
+    main()
+
+
+# ---------------------------------------------------------------------------
+# Tests (run with: pytest bin/daterange)
+# ---------------------------------------------------------------------------
+
+_NOW = datetime.datetime(2026, 5, 10, 10, 0, 0)  # Sunday
+
+
+def _run(expr: str, *, fmt: Optional[str] = None) -> list[str]:
+    return run_pipeline(parse(expr), fmt=fmt, now=_NOW)
+
+
+def test_date_range_basic():
+    assert _run('today..+7d') == [
+        '2026-05-10', '2026-05-11', '2026-05-12', '2026-05-13',
+        '2026-05-14', '2026-05-15', '2026-05-16', '2026-05-17',
+    ]
+
+
+def test_date_range_absolute():
+    assert _run('2026-01-01..2026-01-03') == [
+        '2026-01-01', '2026-01-02', '2026-01-03',
+    ]
+
+
+def test_date_range_step():
+    assert _run('today..+15d/5d') == [
+        '2026-05-10', '2026-05-15', '2026-05-20', '2026-05-25',
+    ]
+
+
+def test_date_range_reachability_truncates():
+    # 10:00..17:30/1h — last reachable is 17:00, not 17:30
+    assert _run('10:00..17:30/1h') == [
+        '10:00:00', '11:00:00', '12:00:00', '13:00:00',
+        '14:00:00', '15:00:00', '16:00:00', '17:00:00',
+    ]
+
+
+def test_time_range_basic():
+    assert _run('09:00..11:00/1h') == ['09:00:00', '10:00:00', '11:00:00']
+
+
+def test_time_range_wrap_around():
+    assert _run('22:00..02:00/1h') == [
+        '22:00:00', '23:00:00', '00:00:00', '01:00:00', '02:00:00',
+    ]
+
+
+def test_time_range_inclusive_end():
+    assert _run('09:00..09:00/1h') == ['09:00:00']
+
+
+def test_datetime_range():
+    result = _run('2026-05-10T09:00..2026-05-10T11:00/1h')
+    assert result == [
+        '2026-05-10T09:00:00',
+        '2026-05-10T10:00:00',
+        '2026-05-10T11:00:00',
+    ]
+
+
+def test_iso_duration_step():
+    assert _run('2026-01..2026-12/P1M') == [
+        '2026-01-01', '2026-02-01', '2026-03-01', '2026-04-01',
+        '2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01',
+        '2026-09-01', '2026-10-01', '2026-11-01', '2026-12-01',
+    ]
+
+
+def test_month_clamping():
+    assert _run('2026-01-31..2026-03-31/1mo') == [
+        '2026-01-31', '2026-02-28', '2026-03-31',
+    ]
+
+
+def test_year_precision_expansion():
+    assert _run('2026..2027/P1Y') == ['2026-01-01', '2027-01-01']
+
+
+def test_count_mode_basic():
+    assert _run('today..#4/5d') == [
+        '2026-05-10', '2026-05-15', '2026-05-20', '2026-05-25',
+    ]
+
+
+def test_count_mode_filter_monday():
+    # today (2026-05-10) is Sunday; first Monday is 2026-05-11
+    result = _run('today..#5/1d@monday')
+    assert result == [
+        '2026-05-11', '2026-05-18', '2026-05-25',
+        '2026-06-01', '2026-06-08',
+    ]
+
+
+def test_count_mode_filter_weekday():
+    result = _run('today..#5/1d@weekday')
+    assert result == [
+        '2026-05-11', '2026-05-12', '2026-05-13', '2026-05-14', '2026-05-15',
+    ]
+
+
+def test_filter_weekend():
+    result = _run('today..#3/1d@weekend')
+    # 2026-05-10 (Sun) counts, next is Sat 2026-05-16, then Sun 2026-05-17
+    assert result == ['2026-05-10', '2026-05-16', '2026-05-17']
+
+
+def test_filter_tuesday_end_mode():
+    result = _run('2025-01-06..2025-01-20/1d@tuesday')
+    assert result == ['2025-01-07', '2025-01-14']
+
+
+def test_custom_format():
+    assert _run('today..+2d', fmt='%d/%m/%Y') == [
+        '10/05/2026', '11/05/2026', '12/05/2026',
+    ]
+
+
+def test_relative_keyword_yesterday_tomorrow():
+    assert _run('yesterday..tomorrow') == [
+        '2026-05-09', '2026-05-10', '2026-05-11',
+    ]
+
+
+def test_now_keyword_datetime():
+    result = _run('now..+2h/1h')
+    assert result == [
+        '2026-05-10T10:00:00',
+        '2026-05-10T11:00:00',
+        '2026-05-10T12:00:00',
+    ]
+
+
+def test_relative_both_endpoints():
+    with pytest.raises(ValueError, match='both endpoints are relative'):
+        _run('+1d..+7d')
+
+
+def test_ambiguous_expression_rejected():
+    with pytest.raises(ValueError):
+        parse_expr('10')
+
+
+def test_zero_step_rejected():
+    with pytest.raises(ValueError, match='[Ii]nvalid duration|[Zz]ero'):
+        parse_duration('0d')
+
+
+def test_end_before_start_rejected():
+    with pytest.raises(ValueError):
+        _run('2026-05-10..2026-05-01/1d')
+
+
+def test_count_and_end_mode_independent():
+    # CountMode and EndMode each produce the expected number of values
+    assert len(_run('today..#3')) == 3
+    assert len(_run('today..+2d')) == 3
+
+
+def test_explicit_form_via_pipeline():
+    # Simulate --from today --count 5 --step 1d --filter weekday
+    range_ast = Range(
+        start=parse_expr('today'),
+        mode=CountMode(5),
+        step=parse_duration('1d'),
+        filters=[parse_filter('weekday')],
+    )
+    result = run_pipeline(range_ast, now=_NOW)
+    assert result == [
+        '2026-05-11', '2026-05-12', '2026-05-13', '2026-05-14', '2026-05-15',
+    ]
