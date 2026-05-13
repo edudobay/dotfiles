@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+
+import argparse
+import re
+import sys
+
+# The mapping character set from 0-15 (0->z, 15->k)
+ALPHABET = "zyxwvutsrqponmlk"
+
+def encode(data: bytes) -> str:
+    """Encodes bytes into a k-z reverse hex string."""
+    return "".join(ALPHABET[b >> 4] + ALPHABET[b & 0x0F] for b in data)
+
+def decode(revhex_str: str) -> bytes:
+    """Decodes a k-z reverse hex string back into bytes."""
+    # Convert characters back to standard hex values (0-15)
+    indices = [ALPHABET.index(char) for char in revhex_str]
+    # Pair up the values and combine them into bytes
+    return bytes((indices[i] << 4) | indices[i + 1] for i in range(0, len(indices), 2))
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--decode', action='store_true')
+    parser.add_argument('-n', '--no-newline', action='store_true')
+    args = parser.parse_args()
+
+    if args.decode:
+        to_decode = sys.stdin.read()
+        if isinstance(to_decode, bytes):
+            to_decode = to_encode.decode('ascii')
+        to_decode = re.sub(r'\s+', '', to_decode)
+        sys.stdout.buffer.write(decode(to_decode))
+        return
+
+    to_encode = sys.stdin.buffer.read()
+    if isinstance(to_encode, str):
+        to_encode = to_encode.encode('utf8')
+
+    end = '\n'
+    if args.no_newline:
+        end = ''
+    print(encode(to_encode), end=end)
+
+if __name__ == '__main__':
+    main()
