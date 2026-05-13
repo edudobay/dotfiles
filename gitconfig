@@ -95,6 +95,7 @@
 [core]
     pager = delta
 	quotepath = off
+	sshCommand = env LC_ALL= ssh  # fix issue with git propagating LC_ALL=C to child processes, and GUI apps complaining about non-UTF-8 locales
 [interactive]
     diffFilter = delta --color-only
 [delta]
