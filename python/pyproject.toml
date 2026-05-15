@@ -23,6 +23,7 @@ git-allrepos = "dotfiles.scripts.git_allrepos:main"
 git-modified = "dotfiles.scripts.git_modified:main"
 gitlab = "dotfiles.scripts.repoweb:main"
 repoweb = "dotfiles.scripts.repoweb:main"
+docker-ps = "dotfiles.docker.docker_ps:main"
 
 [build-system]
 requires = ["hatchling"]
