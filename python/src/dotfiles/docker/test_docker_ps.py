@@ -84,6 +84,37 @@ def test_docker_running():
     assert actual == expected
 
 
+def test_format_ports_text_ranges():
+    # port ranges (e.g. RabbitMQ) must not crash and must appear in output
+    ports_str = "15691-15692/tcp, 0.0.0.0:5672->5672/tcp, 25672/tcp"
+    result = docker_ps._format_ports_text(ports_str, max_ports=None)
+    parts = result.split()
+    assert "5672" in parts                        # published, no dash
+    assert "15691-15692<fg=red>-</>" in parts
+    assert "25672<fg=red>-</>" in parts
+
+
+def test_render_ports_published_first():
+    entries = [("9000", False), ("80", True), ("8080", False)]
+    result = docker_ps._render_ports(entries, max_ports=None)
+    parts = result.split()
+    assert parts[0] == "80"                       # published sorts first
+
+
+def test_render_ports_clamp_and_ellipsis():
+    entries = [(str(p), False) for p in [80, 443, 8080, 9000]]
+    result = docker_ps._render_ports(entries, max_ports=3)
+    parts = result.split()
+    assert len(parts) == 4                        # 3 ports + ellipsis
+    assert parts[-1] == "…"
+
+
+def test_render_ports_no_ellipsis_when_fits():
+    entries = [(str(p), True) for p in [80, 443, 8080]]
+    result = docker_ps._render_ports(entries, max_ports=3)
+    assert "…" not in result
+
+
 def test_sort_rows():
     def row(name, status, service=None):
         r = {"Name": name, "Status": status, "Ports": "", "Image": ""}

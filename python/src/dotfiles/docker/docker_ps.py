@@ -21,35 +21,53 @@ def _format_age(created_at: str) -> str:
     return f"{total // 86400}d"
 
 
-def _format_ports_text(ports_str: str) -> str:
-    """Parse the plain-text Ports field from plain `docker ps` output."""
-    if not ports_str:
-        return ''
-    # port -> (published, has_tcp, has_udp)
-    ports: dict[int, tuple[bool, bool, bool]] = {}
-    for entry in ports_str.split(', '):
-        entry = entry.strip()
-        # published: [addr:]src_port->dst_port/proto
-        if '->' in entry:
-            _, rest = entry.rsplit('->', 1)
-            dst, proto = rest.split('/')
-            port, published = int(dst), True
-        else:
-            dst, proto = entry.split('/')
-            port, published = int(dst), False
-        cur = ports.get(port, (False, False, False))
-        ports[port] = (cur[0] or published, cur[1] or proto == 'tcp', cur[2] or proto == 'udp')
+def _port_range_key(port: str) -> int:
+    return int(port.split('-')[0])
 
-    parts = []
-    for port in sorted(ports):
-        pub, has_tcp, has_udp = ports[port]
-        suffix = '/udp' if has_udp and not has_tcp else ''
-        label = f'{port}{suffix}'
-        parts.append(label if pub else f'{label}<fg=red>-</>')
+
+def _render_ports(entries: list[tuple[str, bool]], max_ports: int | None = 3) -> str:
+    """Render a list of (label, published) port entries into a display string.
+
+    Entries are sorted published-first, then by port number. If max_ports is
+    set and entries are truncated, an ellipsis is appended. Pass max_ports=None
+    to show all ports (for a future --all-ports flag).
+    """
+    entries = sorted(entries, key=lambda e: (not e[1], _port_range_key(e[0])))
+    truncated = max_ports is not None and len(entries) > max_ports
+    if truncated:
+        entries = entries[:max_ports]
+    parts = [label if pub else f'{label}<fg=red>-</>' for label, pub in entries]
+    if truncated:
+        parts.append('…')
     return ' '.join(parts)
 
 
-def _format_ports(publishers: list) -> str:
+def _format_ports_text(ports_str: str, max_ports: int | None = 3) -> str:
+    if not ports_str:
+        return ''
+    # port_range -> (published, has_tcp, has_udp)
+    ports: dict[str, tuple[bool, bool, bool]] = {}
+    for entry in ports_str.split(', '):
+        entry = entry.strip()
+        # published: [addr:]src_port[-src_end]->dst_port[-dst_end]/proto
+        if '->' in entry:
+            _, rest = entry.rsplit('->', 1)
+            dst, proto = rest.split('/')
+            port, published = dst, True
+        else:
+            dst, proto = entry.split('/')
+            port, published = dst, False
+        cur = ports.get(port, (False, False, False))
+        ports[port] = (cur[0] or published, cur[1] or proto == 'tcp', cur[2] or proto == 'udp')
+
+    entries = []
+    for port, (pub, has_tcp, has_udp) in ports.items():
+        suffix = '/udp' if has_udp and not has_tcp else ''
+        entries.append((f'{port}{suffix}', pub))
+    return _render_ports(entries, max_ports)
+
+
+def _format_ports(publishers: list, max_ports: int | None = 3) -> str:
     published: dict[int, bool] = {}
     for p in publishers:
         port = p["TargetPort"]
@@ -58,16 +76,11 @@ def _format_ports(publishers: list) -> str:
         if p["PublishedPort"] > 0:
             published[port] = True
 
-    parts = []
-    for port in sorted(published):
-        if published[port]:
-            parts.append(str(port))
-        else:
-            parts.append(f"{port}<fg=red>-</>")
-    return " ".join(parts)
+    entries = [(str(port), pub) for port, pub in published.items()]
+    return _render_ports(entries, max_ports)
 
 
-def transform_item(data: str, compose: bool = False) -> dict:
+def transform_item(data: str, compose: bool = False, max_ports: int | None = 3) -> dict:
     item = json.loads(data)
     state = item["State"].lower()
     icon = "🟢" if state == "running" else "🔵" if state == "restarting" else "🔴"
@@ -80,13 +93,13 @@ def transform_item(data: str, compose: bool = False) -> dict:
             "Service": item["Service"],
             "Name": item["Name"],
             "Status": status,
-            "Ports": _format_ports(item["Publishers"]),
+            "Ports": _format_ports(item["Publishers"], max_ports),
             "Image": item["Image"],
         }
     return {
         "Name": item["Names"],
         "Status": status,
-        "Ports": _format_ports_text(item["Ports"]),
+        "Ports": _format_ports_text(item["Ports"], max_ports),
         "Image": item["Image"],
     }
 
@@ -109,6 +122,7 @@ def main():
     parser.add_argument("--compose", action="store_true")
     parser.add_argument("-a", action="store_true")
     parser.add_argument("-f", dest="compose_files", action="append", default=[])
+    parser.add_argument("--all-ports", action="store_true")
     args = parser.parse_args()
 
     if args.compose:
@@ -119,9 +133,10 @@ def main():
     if args.a:
         cmd.append("-a")
 
+    max_ports = None if args.all_ports else 3
     result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     rows = [
-        transform_item(line, compose=args.compose)
+        transform_item(line, compose=args.compose, max_ports=max_ports)
         for line in result.stdout.splitlines()
         if line.strip()
     ]
