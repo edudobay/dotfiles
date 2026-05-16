@@ -36,7 +36,7 @@ def _render_ports(entries: list[tuple[str, bool]], max_ports: int | None = 3) ->
     truncated = max_ports is not None and len(entries) > max_ports
     if truncated:
         entries = entries[:max_ports]
-    parts = [label if pub else f'{label}<fg=red>-</>' for label, pub in entries]
+    parts = [label if pub else f'<fg=gray>{label}</>' for label, pub in entries]
     if truncated:
         parts.append('…')
     return ' '.join(parts)

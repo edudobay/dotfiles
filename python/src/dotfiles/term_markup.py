@@ -19,6 +19,8 @@ _RESET = '\x1b[0m'
 def to_ansi(text: str) -> str:
     def replace_open(m: re.Match) -> str:
         color = m.group(1)
+        if color == 'gray':
+            return '\x1b[90m'
         code = COLOR_CODES.get(color)
         if code is None:
             return m.group(0)
