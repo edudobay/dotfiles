@@ -16,6 +16,7 @@ if [[ ${#args[@]} -ge 1 && ${args[1]} = "ps" ]]; then
     exec docker-ps --compose "${custom_args[@]}" "${args[@]}"
 fi
 
+PS4='+ '  # be minimalist (zsh default gives filename/line for -x)
 set -x
 
 exec docker compose "${custom_args[@]}" "${args[@]}"
