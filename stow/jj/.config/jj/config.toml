@@ -35,6 +35,16 @@ stage = ["stack", "closest_merge(@).. ~ empty()"]
 # `jj restack` to rebase your changes onto `trunk()`
 restack = ["rebase", "--onto", "trunk()", "--source", "roots(trunk()..) & mutable()"]
 
+[template-aliases]
+op_log_absolute = '''
+label(if(current_operation, "current_operation"),
+    id.short()
+    ++ " " ++ user
+    ++ " " ++ time.start().local().format("%Y-%m-%d %H:%M:%S")
+    ++ " " ++ description.first_line()
+  ) ++ "\n"
+'''
+
 # https://www.visualjj.com/docs/configuration
 [visualjj]
 snapshot-enabled = false
