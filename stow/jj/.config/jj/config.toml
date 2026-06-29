@@ -9,10 +9,14 @@ diff-editor = ":builtin"
 name = "Eduardo Dobay"
 email = "edudobay@gmail.com"
 
+[git]
+private-commits = "description('private:*')"
+
 [revset-aliases]
 "closest_merge(to)" = "heads(::to & merges())"
 "closest_bookmark(to)" = "heads(::to & bookmarks())"
 "me()" = 'mine() | author_email("edudobay") | author_email("dobay")'
+"more()" = 'ancestors(immutable_heads().., 2) | trunk()::@'
 
 [aliases]
 
