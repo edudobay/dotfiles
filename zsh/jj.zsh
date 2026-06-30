@@ -1,5 +1,15 @@
 # Jujutsu (VCS) - https://docs.jj-vcs.dev/latest/
 
+alias jji='jj git init'
+
+jjclone() {
+    url="$1"
+    if [[ -z "$url" ]]; then
+        url=$(clippaste)
+    fi
+    jj git clone "$url"
+}
+
 # adapted from https://lobste.rs/s/exlogg/jjj
 _fzf_insert_jj_commit() {
   local selected rev
