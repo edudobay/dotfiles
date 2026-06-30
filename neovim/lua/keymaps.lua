@@ -81,4 +81,7 @@ vim.keymap.set('n', '<leader>gs', ':Git<cr>', { desc = 'Git: status' })
 vim.keymap.set('n', '<leader>gc', ':Git commit --verbose<cr>', { desc = 'Git: commit' })
 vim.keymap.set('n', '<leader>g!c', ':Git commit --amend --verbose<cr>', { desc = 'Git: commit (amend)' })
 
+-- Remap due to conflict with other plugins
+vim.keymap.set('n', 'gaa', 'ga', { desc = 'Show ASCII/char code' })
+
 -- vim: ts=2 sts=2 sw=2 et
