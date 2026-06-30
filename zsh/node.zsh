@@ -4,10 +4,13 @@ path+=(
     ~/.local/npm-packages/bin
 )
 
-if [[ -d ~/Library/pnpm ]]; then
-    export PNPM_HOME=~/Library/pnpm/
-    path+=($PNPM_HOME)
-fi
+for PNPM_HOME in ~/.local/share/pnpm ~/Library/pnpm; do
+    if [[ -d "$PNPM_HOME" ]]; then
+        export PNPM_HOME
+        path+=($PNPM_HOME/bin)
+        break
+    fi
+done
 
 # Path for current project
 path+=(./node_modules/.bin)
