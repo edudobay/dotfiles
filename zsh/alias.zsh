@@ -55,3 +55,8 @@ function CD()
     }
     mkdir -p $1 && cd $1
 }
+
+function settitle()
+{
+    printf '\033]2;%s\033\\' "$1"
+}
