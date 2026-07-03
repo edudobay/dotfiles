@@ -1,4 +1,5 @@
-ANTIGEN_THEME='edudobay/dotfiles@main zsh/themes/edudobay'
+ANTIGEN_THEME="$HOME/dotfiles/zsh/themes edudobay-02"
+
 declare -A ANTIGEN_BUNDLES_DISABLE
 
 ANTIGEN_ADD_BUNDLES=(
