@@ -90,4 +90,6 @@ vim.cmd.match { 'ErrorMsg', '"\\s\\+$"' }
 
 vim.g.python3_host_prog = os.getenv 'HOME' .. '/.local/share/nvim/venv-py3/bin/python'
 
+vim.opt.title = true
+
 -- vim: ts=2 sts=2 sw=2 et
