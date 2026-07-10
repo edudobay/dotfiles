@@ -1,7 +1,7 @@
 # Always load bin for globally installed NPM & Yarn packages
 path+=(
     ~/.yarn/bin
-    ~/.local/npm-packages/bin
+    ~/.local/share/npm-packages/bin
 )
 
 for PNPM_HOME in ~/.local/share/pnpm ~/Library/pnpm; do
