@@ -18,7 +18,7 @@ autoload -Uz add-zsh-hook
 add-zsh-hook precmd prompt_exit_line
 
 PROMPT='${PROMPT_EXIT_LINE}%F{237}${(l.$COLUMNS..-.)}%f
-$(optional_user_and_host)%F{032}%~%f$(git_prompt_info)$(git_prompt_status)
+$(optional_user_and_host)%F{032}%~%f %F{105}[%D{%H:%M:%S}]%f$(git_prompt_info)$(git_prompt_status)
 %F{105}->%f %F{105}%#%f '
 
 ZSH_THEME_GIT_PROMPT_SHA_BEFORE="%F{239}"
