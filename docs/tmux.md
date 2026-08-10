@@ -1,4 +1,4 @@
-## Changing pane title
+## Changing pane title / rename-pane
 
 **Manually:**
 ```bash
