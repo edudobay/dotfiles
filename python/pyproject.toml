@@ -4,7 +4,7 @@ version = "0.dev20250210"
 authors = [
     { name = "Eduardo Dobay", email = "edudobay@gmail.com" },
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.14"
 dependencies = [
     "argcomplete",
     "click>=8.1.8",
