@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # coding: utf-8
 """Audio file converter
 
@@ -9,10 +9,10 @@ ffmpeg.
 
 # TODO: Need to improve documentation
 
-from __future__ import print_function
-from subprocess import Popen, PIPE
+import io
 import os.path
 import sys
+from subprocess import Popen, PIPE
 #import termios, tty, signal
 
 OUTPUT_SAME = True
@@ -66,12 +66,12 @@ class AudioCodec(object):
    @staticmethod
    def chain(codecs, input_file, output_file, metadata={}, settings={}):
       if not codecs:
-         raise ValueError, 'invalid codec chain'
+         raise ValueError('invalid codec chain')
       if not isinstance(codecs, list) and not isinstance(codecs, tuple):
          if issubclass(codecs, AudioCodec):
             codecs = [codecs]
          else:
-            raise ValueError, 'invalid codec chain'
+            raise ValueError('invalid codec chain')
 
       if len(codecs) > 1:
          first = codecs[0]
@@ -96,7 +96,7 @@ class OggDecoder(AudioCodec):
    def run(cls, input_file, output_file, metadata={}):
       args = ['oggdec', '-Q',
          '-o', '-' if output_file == PIPE else output_file,
-         '-' if isinstance(input_file, file) else input_file]
+         '-' if isinstance(input_file, io.IOBase) else input_file]
 
       return Popen(args, stdout=PIPE)
 
@@ -104,7 +104,7 @@ class OggEncoder(AudioCodec):
    @classmethod
    def build_metadata_args(cls, metadata):
       args = []
-      for k, v in metadata.iteritems():
+      for k, v in metadata.items():
          if k == 'title':
             add_function = lambda x: ['-t', x]
          elif k == 'artist':
@@ -129,12 +129,12 @@ class OggEncoder(AudioCodec):
    def run(cls, input_file, output_file, metadata={}, settings={}):
       args = ['oggenc', '-Q',
          '-o', '-' if output_file == PIPE else output_file,
-         '-' if isinstance(input_file, file) else input_file]
+         '-' if isinstance(input_file, io.IOBase) else input_file]
       if metadata:
          args += cls.build_metadata_args(metadata)
-      if settings.has_key('quality'):
+      if 'quality' in settings:
          args += ['-q', settings['quality']]
-      if settings.has_key('bitrate'):
+      if 'bitrate' in settings:
          args += ['-b', settings['bitrate']]
 
       return Popen(args, stdout=PIPE)
@@ -145,7 +145,7 @@ class Mp3Decoder(AudioCodec):
    @classmethod
    def run(cls, input_file, output_file, metadata={}):
       args = ['lame', '--silent', '--decode',
-         '-' if isinstance(input_file, file) else input_file,
+         '-' if isinstance(input_file, io.IOBase) else input_file,
          '-' if output_file == PIPE else output_file]
 
       return Popen(args, stdout=PIPE)
@@ -154,7 +154,7 @@ class Mp3Encoder(AudioCodec):
    @classmethod
    def build_metadata_args(cls, metadata):
       args = []
-      for k, v in metadata.iteritems():
+      for k, v in metadata.items():
          if k == 'title':
             add_function = lambda x: ['--tt', x]
          elif k == 'artist':
@@ -186,19 +186,19 @@ class Mp3Encoder(AudioCodec):
             args.append('--id3v1-only')
          args += cls.build_metadata_args(metadata)
 
-      if settings.has_key('quality'):
+      if 'quality' in settings:
          args += ['-q', settings['quality']]
-      if settings.has_key('bitrate'):
+      if 'bitrate' in settings:
          args += ['-b', settings['bitrate']]
-      if settings.has_key('vbr'):
+      if 'vbr' in settings:
          args += ['--vbr-new', '-V', settings['vbr']]
 
       args += [
-         '-' if isinstance(input_file, file) else input_file,
+         '-' if isinstance(input_file, io.IOBase) else input_file,
          '-' if output_file == PIPE else output_file]
 
       fds = {'stdout': PIPE}
-      if input_file == PIPE or isinstance(input_file, file):
+      if input_file == PIPE or isinstance(input_file, io.IOBase):
          fds['stdin'] = input_file
 
       return Popen(args, **fds)
@@ -213,7 +213,7 @@ class FlacDecoder(AudioCodec):
          args.append('-c')
       else:
          args += ['-o', output_file]
-      args.append('-' if isinstance(input_file, file) else input_file)
+      args.append('-' if isinstance(input_file, io.IOBase) else input_file)
 
       return Popen(args, stdout=PIPE)
 
@@ -231,7 +231,7 @@ class FlacEncoder(AudioCodec):
       if metadata: # FLAC uses same comment spec as Vorbis
          args += OggEncoder.build_metadata_args(metadata)
 
-      args.append('-' if isinstance(input_file, file) else input_file)
+      args.append('-' if isinstance(input_file, io.IOBase) else input_file)
 
       return Popen(args, stdout=PIPE)
 
@@ -240,8 +240,8 @@ class FlacEncoder(AudioCodec):
 class ApeDecoder(AudioCodec):
    @classmethod
    def run(cls, input_file, output_file, metadata={}):
-      if isinstance(input_file, file):
-         raise TypeError, 'APE decoder does not support pipe input'
+      if isinstance(input_file, io.IOBase):
+         raise TypeError('APE decoder does not support pipe input')
       args = ['mac', input_file,
          '-' if output_file == PIPE else output_file,
          '-d']
@@ -254,7 +254,7 @@ class FFMpegDecoder(AudioCodec):
    @classmethod
    def run(cls, input_file, output_file, metadata={}):
       args = ['ffmpeg',
-         '-i', '-' if isinstance(input_file, file) else input_file]
+         '-i', '-' if isinstance(input_file, io.IOBase) else input_file]
       if output_file == PIPE:
          args += ['-f', 'wav', '-']
       else:
@@ -323,7 +323,7 @@ class FileConverter(object):
       file_dir, file_name = os.path.split(input_file)
       file_base, ext = os.path.splitext(file_name)
       if not ext:
-         raise FileFormatException, 'file has no extension. Filetype detection not implemented yet.'
+         raise FileFormatException('file has no extension. Filetype detection not implemented yet.')
 
       input_format = Format.from_ext(ext)
       if self.output_file:
@@ -411,8 +411,12 @@ class FileConverter(object):
          elif output_format == Format.OGG:
             return [FFMpegDecoder, OggEncoder]
 
-      raise FileFormatException, 'format conversion from %s to %s not supported' \
-         % (Format.to_str(input_format), Format.to_str(output_format))
+      raise FileFormatException(
+         'format conversion from %s to %s not supported' % (
+            Format.to_str(input_format),
+            Format.to_str(output_format),
+         )
+      )
 
    # TODO: implement this
    def _get_metadata(self, input_format, input_file):
@@ -434,7 +438,7 @@ class Metadata(object):
       return self.tags.get(tag, default)
 
    def has(self, tag):
-      return self.tags.has_key(tag)
+      return tag in self.tags
 
    def set(self, tag, value):
       self.tags[tag] = value
@@ -443,7 +447,7 @@ class Metadata(object):
       return self.tags.keys()
 
    def append(self, tag, value):
-      if not self.tags.has_key(tag):
+      if tag not in self.tags:
          self.tags[tag] = [value]
       else:
          cur = self.tags[tag]
@@ -461,6 +465,7 @@ class Metadata(object):
 
 def parse_vorbis_comment(s):
    metadata = {}
+   s = s.decode('utf-8')
    for line in s.split('\n'):
       if not line: continue
       pos = line.find('=')
@@ -567,5 +572,5 @@ if __name__ == "__main__":
    for input_file in args.inputs:
       try:
          converter.convert(input_file)
-      except AudioConverterException, e:
+      except AudioConverterException as e:
          print('error:', e)
