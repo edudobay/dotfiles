@@ -1,1 +1,8 @@
-include "/usr/share/X11/locale/pt_BR.UTF-8/Compose"
+include "%L"
+
+<Multi_key> <numbersign> <numbersign> : "♯" U266F # SHARP SIGN
+<Multi_key> <numbersign> <b>          : "♭" U266D # FLAT SIGN
+<Multi_key> <b> <b>                   : "♭" U266D # FLAT SIGN
+<Multi_key> <b> <n>                   : "♮" U266E # NATURAL SIGN
+<Multi_key> <numbersign> <n>          : "♮" U266E # NATURAL SIGN
+<Multi_key> <numbersign> <o>          : "♮" U266E # NATURAL SIGN
