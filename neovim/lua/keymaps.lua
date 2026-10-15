@@ -81,6 +81,24 @@ vim.keymap.set('n', '<leader>gs', ':Git<cr>', { desc = 'Git: status' })
 vim.keymap.set('n', '<leader>gc', ':Git commit --verbose<cr>', { desc = 'Git: commit' })
 vim.keymap.set('n', '<leader>g!c', ':Git commit --amend --verbose<cr>', { desc = 'Git: commit (amend)' })
 
+-- Copy path to clipboard
+local function copy_path_to_clipboard(format)
+  local path
+  if format == 'absolute' then
+    path = vim.fn.expand '%:p'
+  else
+    path = vim.fn.expand '%'
+  end
+  vim.fn.setreg('+', path)
+  vim.notify('Path copied to clipboard: ' .. path)
+end
+vim.keymap.set('n', '<leader>ypp', function()
+  copy_path_to_clipboard 'relative'
+end, { desc = 'Copy relative path to clipboard' })
+vim.keymap.set('n', '<leader>ypa', function()
+  copy_path_to_clipboard 'absolute'
+end, { desc = 'Copy absolute path to clipboard' })
+
 -- Remap due to conflict with other plugins
 vim.keymap.set('n', 'gaa', 'ga', { desc = 'Show ASCII/char code' })
 

@@ -31,6 +31,8 @@ return {
         { '<leader>r_', hidden = true },
         { '<leader>s', group = '[S]earch' },
         { '<leader>s_', hidden = true },
+        { '<leader>y', group = 'Cop[y]' },
+        { '<leader>yp', group = 'Copy [p]ath' },
         { '<leader>w', group = '[W]orkspace' },
         { '<leader>w_', hidden = true },
       },
